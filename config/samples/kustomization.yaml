@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- stack_v1alpha1_trino.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
