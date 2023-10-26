@@ -1,0 +1,10 @@
+dependencies:
+  - type: olm.package
+    value:
+      packageName: hive-metastore-operator
+      version: "0.0.1-alpha"
+  - type: olm.gvk
+    value:
+      group: hivemetastores.stack.zncdata.net
+      kind: HiveMetastore
+      version: v1alpha1
