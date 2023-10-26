@@ -8,7 +8,7 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: hive-metadata-operator
+projectName: trino-operator
 repo: github.com/zncdata-labs/trino-operator
 resources:
 - api:

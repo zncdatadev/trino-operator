@@ -4,9 +4,29 @@ metadata:
   labels:
     app.kubernetes.io/name: trino
     app.kubernetes.io/instance: trino-sample
-    app.kubernetes.io/part-of: hive-metadata-operator
+    app.kubernetes.io/part-of: trino-operator
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: hive-metadata-operator
+    app.kubernetes.io/created-by: trino-operator
   name: trino-sample
 spec:
-  # TODO(user): Add fields here
+  replicas: 1
+  image:
+    repository: trinodb/trino
+    tag: "423"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+  service:
+    port: 18000
+    type: ClusterIP
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: traefik
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    host: trino.example.com
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000

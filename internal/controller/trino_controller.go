@@ -18,22 +18,21 @@ package controller
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"reflect"
-
+	"github.com/go-logr/logr"
+	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 )
 
 // TrinoReconciler reconciles a Trino object
 type TrinoReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
 //+kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes,verbs=get;list;watch;create;update;patch;delete
@@ -56,94 +55,89 @@ type TrinoReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
 
-	logger.Info("Reconciling instance")
+	r.Log.Info("Reconciling instance")
 
-	sparkHistory := &stackv1alpha1.Trino{}
-	if err := r.Get(ctx, req.NamespacedName, sparkHistory); err != nil {
+	trino := &stackv1alpha1.Trino{}
+
+	if err := r.Get(ctx, req.NamespacedName, trino); err != nil {
 		if client.IgnoreNotFound(err) != nil {
-			logger.Error(err, "unable to fetch instance")
+			r.Log.Error(err, "unable to fetch Trino")
 			return ctrl.Result{}, err
 		}
-		logger.Info("Instance deleted")
+		r.Log.Info("Trino resource not found. Ignoring since object must be deleted")
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("Instance found", "Name", sparkHistory.Name)
+	// Get the status condition, if it exists and its generation is not the
+	//same as the SparkHistoryServer's generation, reset the status conditions
+	readCondition := apimeta.FindStatusCondition(trino.Status.Conditions, stackv1alpha1.ConditionTypeProgressing)
+	if readCondition == nil || readCondition.ObservedGeneration != trino.GetGeneration() {
+		trino.InitStatusConditions()
 
-	if len(sparkHistory.Status.Conditions) == 0 {
-		sparkHistory.Status.Nodes = []string{}
-		sparkHistory.Status.Conditions = append(sparkHistory.Status.Conditions, corev1.ComponentCondition{
-			Type:   corev1.ComponentHealthy,
-			Status: corev1.ConditionFalse,
-		})
-		err := r.Status().Update(ctx, sparkHistory)
-		if err != nil {
-			logger.Error(err, "unable to update instance status")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
-	} else if sparkHistory.Status.Conditions[0].Status == corev1.ConditionTrue {
-		sparkHistory.Status.Conditions[0].Status = corev1.ConditionFalse
-		err := r.Status().Update(ctx, sparkHistory)
-		if err != nil {
-			logger.Error(err, "unable to update instance status")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	if err := r.reconcilePVC(ctx, sparkHistory); err != nil {
-		logger.Error(err, "unable to reconcile PVC")
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileDeployment(ctx, sparkHistory); err != nil {
-		logger.Error(err, "unable to reconcile Deployment")
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileService(ctx, sparkHistory); err != nil {
-		logger.Error(err, "unable to reconcile Service")
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileIngress(ctx, sparkHistory); err != nil {
-		logger.Error(err, "unable to reconcile Ingress")
-		return ctrl.Result{}, err
-	}
-
-	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, &client.ListOptions{Namespace: sparkHistory.Namespace, LabelSelector: labels.SelectorFromSet(sparkHistory.GetLabels())}); err != nil {
-		logger.Error(err, "unable to list pods")
-		return ctrl.Result{}, err
-	}
-
-	podNames := getPodNames(podList.Items)
-
-	if !reflect.DeepEqual(podNames, sparkHistory.Status.Nodes) {
-		logger.Info("Updating instance status", "nodes", podNames)
-		sparkHistory.Status.Nodes = podNames
-		sparkHistory.Status.Conditions[0].Status = corev1.ConditionTrue
-		err := r.Status().Update(ctx, sparkHistory)
-		if err != nil {
-			logger.Error(err, "unable to update instance status")
+		if err := r.UpdateStatus(ctx, trino); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
+	r.Log.Info("SparkHistoryServer found", "Name", trino.Name)
+
+	if err := r.reconcileDeployment(ctx, trino); err != nil {
+		r.Log.Error(err, "unable to reconcile Deployment")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileService(ctx, trino); err != nil {
+		r.Log.Error(err, "unable to reconcile Service")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileIngress(ctx, trino); err != nil {
+		r.Log.Error(err, "unable to reconcile Ingress")
+		return ctrl.Result{}, err
+	}
+
+	trino.SetStatusCondition(metav1.Condition{
+		Type:               stackv1alpha1.ConditionTypeAvailable,
+		Status:             metav1.ConditionTrue,
+		Reason:             stackv1alpha1.ConditionReasonRunning,
+		Message:            "Trino is running",
+		ObservedGeneration: trino.GetGeneration(),
+	})
+
+	if err := r.UpdateStatus(ctx, trino); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	r.Log.Info("Successfully reconciled Trino")
 	return ctrl.Result{}, nil
-
 }
 
-func getPodNames(pods []corev1.Pod) []string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.Name)
+// UpdateStatus updates the status of the Trino resource
+// https://stackoverflow.com/questions/76388004/k8s-controller-update-status-and-condition
+func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alpha1.Trino) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return r.Status().Update(ctx, instance)
+		//return r.Status().Patch(ctx, instance, client.MergeFrom(instance))
+	})
+
+	if retryErr != nil {
+		r.Log.Error(retryErr, "Failed to update vfm status after retries")
+		return retryErr
 	}
-	return podNames
-} // SetupWithManager sets up the controller with the Manager.
+
+	//if err := r.Get(ctx, key, latest); err != nil {
+	//	r.Log.Error(err, "Failed to get latest object")
+	//	return err
+	//}
+	//
+	//if err := r.Status().Patch(ctx, instance, client.MergeFrom(instance)); err != nil {
+	//	r.Log.Error(err, "Failed to patch object status")
+	//	return err
+	//}
+	r.Log.V(1).Info("Successfully patched object status")
+	return nil
+}
 
 func (r *TrinoReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).

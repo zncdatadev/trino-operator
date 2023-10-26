@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,52 +28,49 @@ import (
 
 // TrinoSpec defines the desired state of Trino
 type TrinoSpec struct {
-	Image ImageSpec `json:"image,omitempty"`
-
-	// +kubebuilder:validation=Optional
-	// +kubebuilder:default=1
-	Replicas int32 `json:"replicas,omitempty"`
-
-	Resource *corev1.ResourceRequirements `json:"resource,omitempty"`
+	// +kubebuilder:validation:Required
+	Image *ImageSpec `json:"image"`
 
 	// +kubebuilder:validation:Optional
-	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default:=1
+	Replicas int32 `json:"replicas"`
+
+	// +kubebuilder:validation:Required
+	Resources *corev1.ResourceRequirements `json:"resources"`
 
 	// +kubebuilder:validation:Optional
-	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
 
 	// +kubebuilder:validation:Optional
-	Service *ServiceSpec `json:"service,omitempty"`
+	Service *ServiceSpec `json:"service"`
 
 	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	Labels map[string]string `json:"labels"`
 
 	// +kubebuilder:validation:Optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	Ingress *IngressSpec `json:"ingress"`
 
 	// +kubebuilder:validation:Optional
-	Persistence *PersistenceSpec `json:"persistence,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Ingress *IngressSpec `json:"ingress,omitempty"`
+	Annotations map[string]string `json:"annotations"`
 }
 
-func (instance *Trino) GetNameWithSuffix(name string) string {
-	return instance.GetName() + "-" + name
+func (r *Trino) GetNameWithSuffix(suffix string) string {
+	// return sparkHistory.GetName() + rand.String(5) + suffix
+	return r.GetName() + "-" + suffix
 }
 
 type ImageSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=trinodb/trino
-	Repository string `json:"repository,omitempty"`
-
+	Repository string `json:"repository"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=latest
+	// +kubebuilder:default:="423"
 	Tag string `json:"tag,omitempty"`
-
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	// +kubebuilder:default=IfNotPresent
-	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=IfNotPresent
+	PullPolicy corev1.PullPolicy `json:"pullPolicy"`
 }
 
 type ServiceSpec struct {
@@ -79,54 +78,78 @@ type ServiceSpec struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +kubebuilder:validation:enum=ClusterIP;NodePort;LoadBalancer;ExternalName
 	// +kubebuilder:default=ClusterIP
-	Type corev1.ServiceType `json:"type,omitempty"`
+	Type corev1.ServiceType `json:"type"`
 
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=18080
-	Port int32 `json:"port,omitempty"`
+	Port int32 `json:"port"`
 }
 
 type IngressSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=spark-history.example.com
+	// +kubebuilder:default:=true
+	Enabled bool `json:"enabled,omitempty"`
+	// +kubebuilder:validation:Optional
+	TLS *networkingv1.IngressTLS `json:"tls,omitempty"`
+	// +kubebuilder:validation:Optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="spark-history-server.example.com"
 	Host string `json:"host,omitempty"`
 }
 
-type PersistenceSpec struct {
-	// +kubebuilder:validation:Optional
-	StorageClass *string `json:"storageClass,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={ReadWriteOnce}
-	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
-
-	// +kubebuilder:default="10Gi"
-	Size string `json:"size,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ExistingClaim *string `json:"existingClaim,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=Filesystem
-	VolumeMode *corev1.PersistentVolumeMode `json:"volumeMode,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Annotations map[string]string `json:"annotations,omitempty"`
+// SetStatusCondition updates the status condition using the provided arguments.
+// If the condition already exists, it updates the condition; otherwise, it appends the condition.
+// If the condition status has changed, it updates the condition's LastTransitionTime.
+func (r *Trino) SetStatusCondition(condition metav1.Condition) {
+	// if the condition already exists, update it
+	existingCondition := apimeta.FindStatusCondition(r.Status.Conditions, condition.Type)
+	if existingCondition == nil {
+		condition.ObservedGeneration = r.GetGeneration()
+		condition.LastTransitionTime = metav1.Now()
+		r.Status.Conditions = append(r.Status.Conditions, condition)
+	} else if existingCondition.Status != condition.Status || existingCondition.Reason != condition.Reason || existingCondition.Message != condition.Message {
+		existingCondition.Status = condition.Status
+		existingCondition.Reason = condition.Reason
+		existingCondition.Message = condition.Message
+		existingCondition.ObservedGeneration = r.GetGeneration()
+		existingCondition.LastTransitionTime = metav1.Now()
+	}
 }
 
-// GetPvcName returns the name of the PVC for the HiveMetastore.
-func (instance *Trino) GetPvcName() string {
-	return instance.GetNameWithSuffix("pvc")
+// InitStatusConditions initializes the status conditions to the provided conditions.
+func (r *Trino) InitStatusConditions() {
+	r.Status.Conditions = []metav1.Condition{}
+	r.SetStatusCondition(metav1.Condition{
+		Type:               ConditionTypeProgressing,
+		Status:             metav1.ConditionTrue,
+		Reason:             ConditionReasonPreparing,
+		Message:            "SparkHistoryServer is preparing",
+		ObservedGeneration: r.GetGeneration(),
+		LastTransitionTime: metav1.Now(),
+	})
+	r.SetStatusCondition(metav1.Condition{
+		Type:               ConditionTypeAvailable,
+		Status:             metav1.ConditionFalse,
+		Reason:             ConditionReasonPreparing,
+		Message:            "SparkHistoryServer is preparing",
+		ObservedGeneration: r.GetGeneration(),
+		LastTransitionTime: metav1.Now(),
+	})
 }
 
 // TrinoStatus defines the observed state of Trino
 type TrinoStatus struct {
-	Nodes      []string                    `json:"nodes"`
-	Conditions []corev1.ComponentCondition `json:"conditions"`
+	// +kubebuilder:validation:Optional
+	Conditions []metav1.Condition `json:"condition,omitempty"`
+	// +kubebuilder:validation:Optional
+	URLs []StatusURL `json:"urls,omitempty"`
+}
+
+type StatusURL struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 //+kubebuilder:object:root=true
