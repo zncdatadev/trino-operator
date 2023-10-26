@@ -1,0 +1,31 @@
+# permissions for end users to edit trinoes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: trino-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: trino-operator
+    app.kubernetes.io/part-of: trino-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: trino-editor-role
+rules:
+- apiGroups:
+  - stack.zncdata.net
+  resources:
+  - trinoes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - stack.zncdata.net
+  resources:
+  - trinoes/status
+  verbs:
+  - get
