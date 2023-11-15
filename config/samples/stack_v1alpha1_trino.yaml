@@ -19,7 +19,7 @@ spec:
       cpu: 100m
       memory: 512Mi
   service:
-    port: 18000
+    port: 18080
     type: ClusterIP
   ingress:
     enabled: true
@@ -40,6 +40,13 @@ spec:
     exchangeManager:
       name: "filesystem"
   coordinator:
+    jvm:
+      maxHeapSize: "8G"
+      gcMethodType: "UseG1GC"
+      gcHeapRegionSize: "32M"
+    config:
+      queryMaxMemoryPerNode: "1GB"
+  worker:
     jvm:
       maxHeapSize: "8G"
       gcMethodType: "UseG1GC"

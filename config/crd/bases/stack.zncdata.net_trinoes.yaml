@@ -374,6 +374,9 @@ spec:
                         default: filesystem
                         type: string
                     type: object
+                  logLevel:
+                    default: INFO
+                    type: string
                   node:
                     properties:
                       dataDir:
@@ -387,7 +390,7 @@ spec:
                         type: string
                     type: object
                   worker:
-                    default: 1
+                    default: 2
                     format: int32
                     type: integer
                 required:
@@ -415,9 +418,35 @@ spec:
                 - port
                 - type
                 type: object
+              worker:
+                properties:
+                  config:
+                    properties:
+                      memoryHeapHeadroomPerNode:
+                        default: ""
+                        type: string
+                      queryMaxMemoryPerNode:
+                        default: 1GB
+                        type: string
+                    type: object
+                  jvm:
+                    properties:
+                      gcHeapRegionSize:
+                        default: 32M
+                        type: string
+                      gcMethodType:
+                        default: UseG1GC
+                        type: string
+                      maxHeapSize:
+                        default: 8Gi
+                        type: string
+                    type: object
+                type: object
             required:
+            - coordinator
             - image
             - resources
+            - worker
             type: object
           status:
             description: TrinoStatus defines the observed state of Trino

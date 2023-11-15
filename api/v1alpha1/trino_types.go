@@ -58,8 +58,11 @@ type TrinoSpec struct {
 	// +kubebuilder:validation:Optional
 	Server *ServerSpec `json:"server"`
 
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	Coordinator *CoordinatorSpec `json:"coordinator"`
+
+	// +kubebuilder:validation:Required
+	Worker *WorkerSpec `json:"worker"`
 }
 
 func (r *Trino) GetNameWithSuffix(suffix string) string {
@@ -107,24 +110,15 @@ type IngressSpec struct {
 
 type ServerSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=1
+	// +kubebuilder:default:=2
 	Worker          int32                `json:"worker"`
 	Node            *NodeSpec            `json:"node,omitempty"`
 	Config          *ConfigServerSpec    `json:"config"`
 	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=INFO
+	LogLevel string `json:"logLevel"`
 }
-
-//func (server *ServerSpec) GetNode() *NodeSpec {
-//	if server.Node == nil {
-//		server.Node = &NodeSpec{
-//			Environment: "production",
-//			DataDir: "/data/trino",
-//		}
-//	}
-//
-//	return server.Node
-//
-//}
 
 type ExchangeManagerSpec struct {
 	// +kubebuilder:validation:Optional
@@ -175,12 +169,12 @@ type HttpsSpec struct {
 
 type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	Jvm *JvmSpec `json:"jvm,omitempty"`
+	Jvm *JvmCoordinatorSpec `json:"jvm,omitempty"`
 	// +kubebuilder:validation:Optional
 	Config *ConfigCoordinatorSpec `json:"config"`
 }
 
-type JvmSpec struct {
+type JvmCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="8Gi"
 	MaxHeapSize string `json:"maxHeapSize"`
@@ -193,6 +187,34 @@ type JvmSpec struct {
 }
 
 type ConfigCoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="1GB"
+	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
+}
+
+type WorkerSpec struct {
+	// +kubebuilder:validation:Optional
+	Jvm *JvmWorkerSpec `json:"jvm,omitempty"`
+	// +kubebuilder:validation:Optional
+	Config *ConfigWrokerSpec `json:"config"`
+}
+
+type JvmWorkerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="8Gi"
+	MaxHeapSize string `json:"maxHeapSize"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="UseG1GC"
+	GcMethodType string `json:"gcMethodType"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="32M"
+	G1HeapRegionSize string `json:"gcHeapRegionSize"`
+}
+
+type ConfigWrokerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
 	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
