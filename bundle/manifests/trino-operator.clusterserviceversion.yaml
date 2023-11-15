@@ -18,6 +18,16 @@ metadata:
             "name": "trino-sample"
           },
           "spec": {
+            "coordinator": {
+              "config": {
+                "queryMaxMemoryPerNode": "1GB"
+              },
+              "jvm": {
+                "gcHeapRegionSize": "32M",
+                "gcMethodType": "UseG1GC",
+                "maxHeapSize": "8G"
+              }
+            },
             "image": {
               "pullPolicy": "IfNotPresent",
               "repository": "trinodb/trino",
@@ -42,6 +52,23 @@ metadata:
               "fsGroup": 1000,
               "runAsUser": 1000
             },
+            "server": {
+              "config": {
+                "https": {
+                  "enabled": false
+                },
+                "path": "/etc/trino",
+                "queryMaxMemory": "4GB"
+              },
+              "exchangeManager": {
+                "name": "filesystem"
+              },
+              "node": {
+                "dataDir": "/data/trino",
+                "environment": "production",
+                "pluginDir": "/usr/lib/trino/plugin"
+              }
+            },
             "service": {
               "port": 18000,
               "type": "ClusterIP"
@@ -50,8 +77,8 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2023-10-26T03:00:25Z"
-    operators.operatorframework.io/builder: operator-sdk-v1.31.0
+    createdAt: "2023-11-15T03:36:12Z"
+    operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4-alpha
   name: trino-operator.v0.0.1-alpha
   namespace: placeholder
@@ -222,7 +249,7 @@ spec:
                 - --upstream=http://127.0.0.1:8080/
                 - --logtostderr=true
                 - --v=0
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
+                image: docker.io/bitnami/kube-rbac-proxy:0.13.1
                 name: kube-rbac-proxy
                 ports:
                 - containerPort: 8443

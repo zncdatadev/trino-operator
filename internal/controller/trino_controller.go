@@ -97,6 +97,11 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
+	if err := r.reconcileConfigMap(ctx, trino); err != nil {
+		r.Log.Error(err, "unable to reconcile Ingress")
+		return ctrl.Result{}, err
+	}
+
 	trino.SetStatusCondition(metav1.Condition{
 		Type:               stackv1alpha1.ConditionTypeAvailable,
 		Status:             metav1.ConditionTrue,

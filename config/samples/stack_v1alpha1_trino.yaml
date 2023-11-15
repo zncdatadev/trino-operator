@@ -27,6 +27,25 @@ spec:
       kubernetes.io/ingress.class: traefik
       nginx.ingress.kubernetes.io/rewrite-target: /
     host: trino.example.com
+  server:
+    node:
+      environment: "production"
+      dataDir: /data/trino
+      pluginDir: /usr/lib/trino/plugin
+    config:
+      queryMaxMemory: "4GB"
+      path: /etc/trino
+      https:
+        enabled: false
+    exchangeManager:
+      name: "filesystem"
+  coordinator:
+    jvm:
+      maxHeapSize: "8G"
+      gcMethodType: "UseG1GC"
+      gcHeapRegionSize: "32M"
+    config:
+      queryMaxMemoryPerNode: "1GB"
   securityContext:
     runAsUser: 1000
     fsGroup: 1000

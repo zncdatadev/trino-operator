@@ -108,11 +108,31 @@ type IngressSpec struct {
 type ServerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=1
-	Worker int32 `json:"worker"`
+	Worker          int32                `json:"worker"`
+	Node            *NodeSpec            `json:"node,omitempty"`
+	Config          *ConfigServerSpec    `json:"config"`
+	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager"`
+}
+
+//func (server *ServerSpec) GetNode() *NodeSpec {
+//	if server.Node == nil {
+//		server.Node = &NodeSpec{
+//			Environment: "production",
+//			DataDir: "/data/trino",
+//		}
+//	}
+//
+//	return server.Node
+//
+//}
+
+type ExchangeManagerSpec struct {
 	// +kubebuilder:validation:Optional
-	Node *NodeSpec `json:"node"`
+	// +kubebuilder:default:="filesystem"
+	Name string `json:"name"`
 	// +kubebuilder:validation:Optional
-	Config *ConfigSpec `json:"config"`
+	// +kubebuilder:default:="/tmp/trino-local-file-system-exchange-manager"
+	BaseDir string `json:"baseDir"`
 }
 
 type NodeSpec struct {
@@ -120,19 +140,25 @@ type NodeSpec struct {
 	// +kubebuilder:default:="production"
 	Environment string `json:"environment"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/data/trino"
+	// +kubebuilder:default:=/data/trino
 	DataDir string `json:"dataDir"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/usr/lib/trino/plugin"
+	// +kubebuilder:default:=/usr/lib/trino/plugin
 	PluginDir string `json:"pluginDir"`
 }
 
-type ConfigSpec struct {
+type ConfigServerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="/etc/trino"
 	Path string `json:"path"`
 	// +kubebuilder:validation:Optional
-	Https HttpsSpec `json:"https"`
+	Https *HttpsSpec `json:"https"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="4GB"
+	QueryMaxMemory string `json:"queryMaxMemory"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	AuthenticationType string `json:"authenticationType"`
 }
 
 type HttpsSpec struct {
@@ -143,27 +169,36 @@ type HttpsSpec struct {
 	// +kubebuilder:default:=8443
 	Port int `json:"port"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=4GB
+	// +kubebuilder:default:="4Gi"
 	QueryMaxMemory string `json:"queryMaxMemory"`
 }
 
 type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	Jvm *JvmSpec `json:"jvm,omitempty"`
+	// +kubebuilder:validation:Optional
+	Config *ConfigCoordinatorSpec `json:"config"`
 }
 
 type JvmSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=8G
+	// +kubebuilder:default:="8Gi"
 	MaxHeapSize string `json:"maxHeapSize"`
 	// +kubebuilder:validation:Optional
-	GcMethod string `json:"gcMethod"`
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="UseG1GC"
-	Type string `json:"type"`
+	GcMethodType string `json:"gcMethodType"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=32M
+	// +kubebuilder:default:="32M"
 	G1HeapRegionSize string `json:"gcHeapRegionSize"`
+}
+
+type ConfigCoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="1GB"
+	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
 }
 
 // SetStatusCondition updates the status condition using the provided arguments.
