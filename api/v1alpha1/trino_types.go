@@ -54,6 +54,12 @@ type TrinoSpec struct {
 
 	// +kubebuilder:validation:Optional
 	Annotations map[string]string `json:"annotations"`
+
+	// +kubebuilder:validation:Optional
+	Server *ServerSpec `json:"server"`
+
+	// +kubebuilder:validation:Optional
+	Coordinator *CoordinatorSpec `json:"coordinator"`
 }
 
 func (r *Trino) GetNameWithSuffix(suffix string) string {
@@ -97,6 +103,67 @@ type IngressSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="spark-history-server.example.com"
 	Host string `json:"host,omitempty"`
+}
+
+type ServerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=1
+	Worker int32 `json:"worker"`
+	// +kubebuilder:validation:Optional
+	Node *NodeSpec `json:"node"`
+	// +kubebuilder:validation:Optional
+	Config *ConfigSpec `json:"config"`
+}
+
+type NodeSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="production"
+	Environment string `json:"environment"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="/data/trino"
+	DataDir string `json:"dataDir"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="/usr/lib/trino/plugin"
+	PluginDir string `json:"pluginDir"`
+}
+
+type ConfigSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="/etc/trino"
+	Path string `json:"path"`
+	// +kubebuilder:validation:Optional
+	Https HttpsSpec `json:"https"`
+}
+
+type HttpsSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	Enabled bool `json:"enabled"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=8443
+	Port int `json:"port"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=4GB
+	QueryMaxMemory string `json:"queryMaxMemory"`
+}
+
+type CoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	Jvm *JvmSpec `json:"jvm,omitempty"`
+}
+
+type JvmSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=8G
+	MaxHeapSize string `json:"maxHeapSize"`
+	// +kubebuilder:validation:Optional
+	GcMethod string `json:"gcMethod"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="UseG1GC"
+	Type string `json:"type"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=32M
+	G1HeapRegionSize string `json:"gcHeapRegionSize"`
 }
 
 // SetStatusCondition updates the status condition using the provided arguments.

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -166,6 +167,52 @@ func (r *TrinoReconciler) makeDeployment(instance *stackv1alpha1.Trino, schema *
 									Protocol:      "TCP",
 								},
 							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      instance.GetNameWithSuffix("config"),
+									MountPath: "/etc/trino",
+								},
+								{
+									Name:      instance.GetNameWithSuffix("catalog"),
+									MountPath: "/etc/trino/catalog",
+								},
+								{
+									Name:      instance.GetNameWithSuffix("schemas"),
+									MountPath: "/etc/trino/schemas",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: instance.GetNameWithSuffix("config"),
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "trino-coordinator",
+									},
+								},
+							},
+						},
+						{
+							Name: instance.GetNameWithSuffix("catalog"),
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "trino-catalog",
+									},
+								},
+							},
+						},
+						{
+							Name: instance.GetNameWithSuffix("schemas"),
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "trino-schemas-coordinator",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -203,6 +250,63 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 	}
 	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
 		logger.Error(err, "Failed to create or update deployment")
+		return err
+	}
+	return nil
+}
+
+func (r *TrinoReconciler) makeConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+	labels := instance.GetLabels()
+	nodeProps := instance.Spec.Server.Node
+	jvmConfigData := "-server\n" +
+		"-Xmx" + instance.Spec.Coordinator.Jvm.MaxHeapSize + "\n" +
+		"-XX:+Use" + instance.Spec.Coordinator.Jvm.GcMethod + "\n" +
+		"-XX:G1HeapRegionSize=" + instance.Spec.Coordinator.Jvm.G1HeapRegionSize + "\n" +
+		"-XX:+UseGCOverheadLimit\n" +
+		"-XX:+ExplicitGCInvokesConcurrent\n" +
+		"-XX:+HeapDumpOnOutOfMemoryError\n" +
+		"-XX:+ExitOnOutOfMemoryError\n" +
+		"-Djdk.attach.allowAttachSelf=true\n" +
+		"-XX:-UseBiasedLocking\n" +
+		"-XX:ReservedCodeCacheSize=512M\n" +
+		"-XX:PerMethodRecompilationCutoff=10000\n" +
+		"-XX:PerBytecodeRecompilationCutoff=10000\n" +
+		"-Djdk.nio.maxCachedBufferSize=2000000\n" +
+		"-XX:+UnlockDiagnosticVMOptions\n" +
+		"-XX:+UseAESCTRIntrinsics"
+
+	nodePropsJSON, setErr := json.Marshal(nodeProps)
+	if setErr != nil {
+		// Handle the error
+	}
+
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.GetNameWithSuffix("coordinator"),
+			Namespace: instance.Namespace,
+			Labels:    labels,
+		},
+		Data: map[string]string{
+			"node.properties": string(nodePropsJSON),
+			"jvm.config":      jvmConfigData,
+		},
+	}
+	err := ctrl.SetControllerReference(instance, &cm, schema)
+	if err != nil {
+		r.Log.Error(err, "Failed to set controller reference for configmap")
+		return nil
+	}
+	return &cm
+}
+
+func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stackv1alpha1.Trino) error {
+	obj := r.makeConfigMap(instance, r.Scheme)
+	if obj == nil {
+		return nil
+	}
+
+	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
+		r.Log.Error(err, "Failed to create or update service")
 		return err
 	}
 	return nil
