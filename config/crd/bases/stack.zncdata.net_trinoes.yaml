@@ -38,6 +38,30 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              coordinator:
+                properties:
+                  config:
+                    properties:
+                      memoryHeapHeadroomPerNode:
+                        default: ""
+                        type: string
+                      queryMaxMemoryPerNode:
+                        default: 1GB
+                        type: string
+                    type: object
+                  jvm:
+                    properties:
+                      gcHeapRegionSize:
+                        default: 32M
+                        type: string
+                      gcMethodType:
+                        default: UseG1GC
+                        type: string
+                      maxHeapSize:
+                        default: 8Gi
+                        type: string
+                    type: object
+                type: object
               image:
                 properties:
                   pullPolicy:
@@ -315,6 +339,64 @@ spec:
                         type: string
                     type: object
                 type: object
+              server:
+                properties:
+                  config:
+                    properties:
+                      authenticationType:
+                        default: ""
+                        type: string
+                      https:
+                        properties:
+                          enabled:
+                            default: false
+                            type: boolean
+                          port:
+                            default: 8443
+                            type: integer
+                          queryMaxMemory:
+                            default: 4Gi
+                            type: string
+                        type: object
+                      path:
+                        default: /etc/trino
+                        type: string
+                      queryMaxMemory:
+                        default: 4GB
+                        type: string
+                    type: object
+                  exchangeManager:
+                    properties:
+                      baseDir:
+                        default: /tmp/trino-local-file-system-exchange-manager
+                        type: string
+                      name:
+                        default: filesystem
+                        type: string
+                    type: object
+                  logLevel:
+                    default: INFO
+                    type: string
+                  node:
+                    properties:
+                      dataDir:
+                        default: /data/trino
+                        type: string
+                      environment:
+                        default: production
+                        type: string
+                      pluginDir:
+                        default: /usr/lib/trino/plugin
+                        type: string
+                    type: object
+                  worker:
+                    default: 2
+                    format: int32
+                    type: integer
+                required:
+                - config
+                - exchangeManager
+                type: object
               service:
                 properties:
                   annotations:
@@ -336,9 +418,35 @@ spec:
                 - port
                 - type
                 type: object
+              worker:
+                properties:
+                  config:
+                    properties:
+                      memoryHeapHeadroomPerNode:
+                        default: ""
+                        type: string
+                      queryMaxMemoryPerNode:
+                        default: 1GB
+                        type: string
+                    type: object
+                  jvm:
+                    properties:
+                      gcHeapRegionSize:
+                        default: 32M
+                        type: string
+                      gcMethodType:
+                        default: UseG1GC
+                        type: string
+                      maxHeapSize:
+                        default: 8Gi
+                        type: string
+                    type: object
+                type: object
             required:
+            - coordinator
             - image
             - resources
+            - worker
             type: object
           status:
             description: TrinoStatus defines the observed state of Trino

@@ -35,9 +35,9 @@ type TrinoReconciler struct {
 	Log    logr.Logger
 }
 
-//+kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -97,6 +97,11 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
+	if err := r.reconcileConfigMap(ctx, trino); err != nil {
+		r.Log.Error(err, "unable to reconcile Ingress")
+		return ctrl.Result{}, err
+	}
+
 	trino.SetStatusCondition(metav1.Condition{
 		Type:               stackv1alpha1.ConditionTypeAvailable,
 		Status:             metav1.ConditionTrue,
@@ -126,15 +131,6 @@ func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alp
 		return retryErr
 	}
 
-	//if err := r.Get(ctx, key, latest); err != nil {
-	//	r.Log.Error(err, "Failed to get latest object")
-	//	return err
-	//}
-	//
-	//if err := r.Status().Patch(ctx, instance, client.MergeFrom(instance)); err != nil {
-	//	r.Log.Error(err, "Failed to patch object status")
-	//	return err
-	//}
 	r.Log.V(1).Info("Successfully patched object status")
 	return nil
 }

@@ -54,6 +54,15 @@ type TrinoSpec struct {
 
 	// +kubebuilder:validation:Optional
 	Annotations map[string]string `json:"annotations"`
+
+	// +kubebuilder:validation:Optional
+	Server *ServerSpec `json:"server"`
+
+	// +kubebuilder:validation:Required
+	Coordinator *CoordinatorSpec `json:"coordinator"`
+
+	// +kubebuilder:validation:Required
+	Worker *WorkerSpec `json:"worker"`
 }
 
 func (r *Trino) GetNameWithSuffix(suffix string) string {
@@ -97,6 +106,121 @@ type IngressSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="spark-history-server.example.com"
 	Host string `json:"host,omitempty"`
+}
+
+type ServerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=2
+	Worker          int32                `json:"worker"`
+	Node            *NodeSpec            `json:"node,omitempty"`
+	Config          *ConfigServerSpec    `json:"config"`
+	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=INFO
+	LogLevel string `json:"logLevel"`
+}
+
+type ExchangeManagerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="filesystem"
+	Name string `json:"name"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="/tmp/trino-local-file-system-exchange-manager"
+	BaseDir string `json:"baseDir"`
+}
+
+type NodeSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="production"
+	Environment string `json:"environment"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=/data/trino
+	DataDir string `json:"dataDir"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=/usr/lib/trino/plugin
+	PluginDir string `json:"pluginDir"`
+}
+
+type ConfigServerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="/etc/trino"
+	Path string `json:"path"`
+	// +kubebuilder:validation:Optional
+	Https *HttpsSpec `json:"https"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="4GB"
+	QueryMaxMemory string `json:"queryMaxMemory"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	AuthenticationType string `json:"authenticationType"`
+}
+
+type HttpsSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	Enabled bool `json:"enabled"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=8443
+	Port int `json:"port"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="4Gi"
+	QueryMaxMemory string `json:"queryMaxMemory"`
+}
+
+type CoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	Jvm *JvmCoordinatorSpec `json:"jvm,omitempty"`
+	// +kubebuilder:validation:Optional
+	Config *ConfigCoordinatorSpec `json:"config"`
+}
+
+type JvmCoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="8Gi"
+	MaxHeapSize string `json:"maxHeapSize"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="UseG1GC"
+	GcMethodType string `json:"gcMethodType"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="32M"
+	G1HeapRegionSize string `json:"gcHeapRegionSize"`
+}
+
+type ConfigCoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="1GB"
+	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
+}
+
+type WorkerSpec struct {
+	// +kubebuilder:validation:Optional
+	Jvm *JvmWorkerSpec `json:"jvm,omitempty"`
+	// +kubebuilder:validation:Optional
+	Config *ConfigWrokerSpec `json:"config"`
+}
+
+type JvmWorkerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="8Gi"
+	MaxHeapSize string `json:"maxHeapSize"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="UseG1GC"
+	GcMethodType string `json:"gcMethodType"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="32M"
+	G1HeapRegionSize string `json:"gcHeapRegionSize"`
+}
+
+type ConfigWrokerSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="1GB"
+	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
 }
 
 // SetStatusCondition updates the status condition using the provided arguments.
