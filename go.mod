@@ -1,6 +1,6 @@
 module github.com/zncdata-labs/trino-operator
 
-go 1.19
+go 1.20
 
 require (
 	github.com/cisco-open/k8s-objectmatcher v1.9.0

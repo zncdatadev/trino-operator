@@ -33,7 +33,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - run: |
           make build
-
+ 
   linting:
     name: Lint Code Base
     runs-on: ubuntu-latest
