@@ -39,6 +39,7 @@ spec:
         enabled: false
     exchangeManager:
       name: "filesystem"
+    worker: 1
   coordinator:
     jvm:
       maxHeapSize: "8G"

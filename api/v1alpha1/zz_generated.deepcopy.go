@@ -363,6 +363,11 @@ func (in *TrinoSpec) DeepCopyInto(out *TrinoSpec) {
 		*out = new(v1.PodSecurityContext)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
+		*out = new(v1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Service != nil {
 		in, out := &in.Service, &out.Service
 		*out = new(ServiceSpec)
