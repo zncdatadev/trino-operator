@@ -44,6 +44,9 @@ type TrinoSpec struct {
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
 
 	// +kubebuilder:validation:Optional
+	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Optional
 	Service *ServiceSpec `json:"service"`
 
 	// +kubebuilder:validation:Optional

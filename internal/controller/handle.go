@@ -234,6 +234,50 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 		},
 	}
 
+	if instance.Spec.Affinity != nil {
+		dep.Spec.Template.Spec.Affinity = &corev1.Affinity{}
+		if instance.Spec.Affinity.NodeAffinity != nil {
+			dep.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
+			if instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+				dep.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{
+						{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key,
+									Operator: instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Operator,
+									Values:   instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Values,
+								},
+							},
+						},
+					},
+				}
+			}
+			if instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+				preferredTerms := []corev1.PreferredSchedulingTerm{}
+
+				for _, term := range instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+					preferredTerm := corev1.PreferredSchedulingTerm{
+						Weight: term.Weight,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      term.Preference.MatchExpressions[0].Key,
+									Operator: term.Preference.MatchExpressions[0].Operator,
+									Values:   term.Preference.MatchExpressions[0].Values,
+								},
+							},
+						},
+					}
+
+					preferredTerms = append(preferredTerms, preferredTerm)
+				}
+
+				dep.Spec.Template.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+			}
+		}
+	}
+
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for deployment")
@@ -327,6 +371,51 @@ func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, sc
 			},
 		},
 	}
+
+	if instance.Spec.Affinity != nil {
+		dep.Spec.Template.Spec.Affinity = &corev1.Affinity{}
+		if instance.Spec.Affinity.NodeAffinity != nil {
+			dep.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
+			if instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+				dep.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{
+						{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key,
+									Operator: instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Operator,
+									Values:   instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Values,
+								},
+							},
+						},
+					},
+				}
+			}
+			if instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+				preferredTerms := []corev1.PreferredSchedulingTerm{}
+
+				for _, term := range instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+					preferredTerm := corev1.PreferredSchedulingTerm{
+						Weight: term.Weight,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      term.Preference.MatchExpressions[0].Key,
+									Operator: term.Preference.MatchExpressions[0].Operator,
+									Values:   term.Preference.MatchExpressions[0].Values,
+								},
+							},
+						},
+					}
+
+					preferredTerms = append(preferredTerms, preferredTerm)
+				}
+
+				dep.Spec.Template.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+			}
+		}
+	}
+
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for deployment")
