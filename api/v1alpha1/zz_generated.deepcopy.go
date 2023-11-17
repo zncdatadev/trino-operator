@@ -368,6 +368,11 @@ func (in *TrinoSpec) DeepCopyInto(out *TrinoSpec) {
 		*out = new(v1.Affinity)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Tolerations != nil {
+		in, out := &in.Tolerations, &out.Tolerations
+		*out = new(v1.Toleration)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Service != nil {
 		in, out := &in.Service, &out.Service
 		*out = new(ServiceSpec)

@@ -234,6 +234,20 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 		},
 	}
 
+	if instance.Spec.Tolerations != nil {
+		toleration := *instance.Spec.Tolerations
+
+		dep.Spec.Template.Spec.Tolerations = []corev1.Toleration{
+			{
+				Key:               toleration.Key,
+				Operator:          toleration.Operator,
+				Value:             toleration.Value,
+				Effect:            toleration.Effect,
+				TolerationSeconds: toleration.TolerationSeconds,
+			},
+		}
+	}
+
 	if instance.Spec.Affinity != nil {
 		dep.Spec.Template.Spec.Affinity = &corev1.Affinity{}
 		if instance.Spec.Affinity.NodeAffinity != nil {
@@ -493,6 +507,20 @@ func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, sc
 				},
 			},
 		},
+	}
+
+	if instance.Spec.Tolerations != nil {
+		toleration := *instance.Spec.Tolerations
+
+		dep.Spec.Template.Spec.Tolerations = []corev1.Toleration{
+			{
+				Key:               toleration.Key,
+				Operator:          toleration.Operator,
+				Value:             toleration.Value,
+				Effect:            toleration.Effect,
+				TolerationSeconds: toleration.TolerationSeconds,
+			},
+		}
 	}
 
 	if instance.Spec.Affinity != nil {

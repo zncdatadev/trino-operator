@@ -47,6 +47,8 @@ type TrinoSpec struct {
 	Affinity *corev1.Affinity `json:"affinity"`
 
 	// +kubebuilder:validation:Optional
+	Tolerations *corev1.Toleration `json:"tolerations"`
+	// +kubebuilder:validation:Optional
 	Service *ServiceSpec `json:"service"`
 
 	// +kubebuilder:validation:Optional
