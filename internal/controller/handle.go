@@ -513,6 +513,10 @@ func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, sc
 		},
 	}
 
+	if instance.Spec.NodeSelector != nil {
+		dep.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
+	}
+
 	if instance.Spec.Tolerations != nil {
 		toleration := *instance.Spec.Tolerations
 
