@@ -234,6 +234,10 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 		},
 	}
 
+	if instance.Spec.NodeSelector != nil {
+		dep.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
+	}
+
 	if instance.Spec.Tolerations != nil {
 		toleration := *instance.Spec.Tolerations
 

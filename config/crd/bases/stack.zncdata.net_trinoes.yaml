@@ -944,6 +944,10 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                type: object
               replicas:
                 default: 1
                 format: int32

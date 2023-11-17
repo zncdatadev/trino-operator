@@ -44,10 +44,14 @@ type TrinoSpec struct {
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
 
 	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector"`
+
+	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
 
 	// +kubebuilder:validation:Optional
 	Tolerations *corev1.Toleration `json:"tolerations"`
+
 	// +kubebuilder:validation:Optional
 	Service *ServiceSpec `json:"service"`
 
