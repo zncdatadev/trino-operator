@@ -14,10 +14,6 @@ spec:
     repository: trinodb/trino
     tag: "423"
     pullPolicy: IfNotPresent
-  resources:
-    requests:
-      cpu: 100m
-      memory: 512Mi
   service:
     port: 18080
     type: ClusterIP
@@ -41,6 +37,10 @@ spec:
       name: "filesystem"
     worker: 1
   coordinator:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
     jvm:
       maxHeapSize: "8G"
       gcMethodType: "UseG1GC"
@@ -48,6 +48,10 @@ spec:
     config:
       queryMaxMemoryPerNode: "1GB"
   worker:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
     jvm:
       maxHeapSize: "8G"
       gcMethodType: "UseG1GC"

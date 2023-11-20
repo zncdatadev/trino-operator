@@ -37,17 +37,8 @@ type TrinoSpec struct {
 	// +kubebuilder:default:=1
 	Replicas int32 `json:"replicas"`
 
-	// +kubebuilder:validation:Required
-	Resources *corev1.ResourceRequirements `json:"resources"`
-
 	// +kubebuilder:validation:Optional
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
-
-	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector"`
-
-	// +kubebuilder:validation:Optional
-	Affinity *corev1.Affinity `json:"affinity"`
 
 	// +kubebuilder:validation:Optional
 	Tolerations *corev1.Toleration `json:"tolerations"`
@@ -178,7 +169,17 @@ type HttpsSpec struct {
 
 type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector"`
+
+	// +kubebuilder:validation:Optional
+	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Required
+	Resources *corev1.ResourceRequirements `json:"resources"`
+
+	// +kubebuilder:validation:Optional
 	Jvm *JvmCoordinatorSpec `json:"jvm,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	Config *ConfigCoordinatorSpec `json:"config"`
 }
@@ -206,7 +207,17 @@ type ConfigCoordinatorSpec struct {
 
 type WorkerSpec struct {
 	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector"`
+
+	// +kubebuilder:validation:Optional
+	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Required
+	Resources *corev1.ResourceRequirements `json:"resources"`
+
+	// +kubebuilder:validation:Optional
 	Jvm *JvmWorkerSpec `json:"jvm,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	Config *ConfigWrokerSpec `json:"config"`
 }
