@@ -39,6 +39,7 @@ type TrinoReconciler struct {
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
@@ -84,6 +85,11 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	if err := r.reconcileDeployment(ctx, trino); err != nil {
 		r.Log.Error(err, "unable to reconcile Deployment")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileWorkerDaemonSet(ctx, trino); err != nil {
+		r.Log.Error(err, "unable to reconcile DaemonSet")
 		return ctrl.Result{}, err
 	}
 

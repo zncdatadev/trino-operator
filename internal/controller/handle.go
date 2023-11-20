@@ -173,7 +173,7 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 							Name:            instance.GetNameWithSuffix("coordinator"),
 							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
 							ImagePullPolicy: instance.Spec.Image.PullPolicy,
-							Resources:       *instance.Spec.Resources,
+							Resources:       *instance.Spec.Coordinator.Resources,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 18080,
@@ -234,29 +234,58 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 		},
 	}
 
-	if instance.Spec.Affinity != nil {
+	if instance.Spec.Coordinator.NodeSelector != nil {
+		dep.Spec.Template.Spec.NodeSelector = instance.Spec.Coordinator.NodeSelector
+	}
+
+	if instance.Spec.Tolerations != nil {
+		toleration := *instance.Spec.Tolerations
+
+		dep.Spec.Template.Spec.Tolerations = []corev1.Toleration{
+			{
+				Key:               toleration.Key,
+				Operator:          toleration.Operator,
+				Value:             toleration.Value,
+				Effect:            toleration.Effect,
+				TolerationSeconds: toleration.TolerationSeconds,
+			},
+		}
+	}
+
+	if instance.Spec.Coordinator.Affinity != nil {
 		dep.Spec.Template.Spec.Affinity = &corev1.Affinity{}
-		if instance.Spec.Affinity.NodeAffinity != nil {
+		if instance.Spec.Coordinator.Affinity.NodeAffinity != nil {
 			dep.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
-			if instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
-				dep.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{
-					NodeSelectorTerms: []corev1.NodeSelectorTerm{
-						{
-							MatchExpressions: []corev1.NodeSelectorRequirement{
-								{
-									Key:      instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key,
-									Operator: instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Operator,
-									Values:   instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Values,
-								},
+			if instance.Spec.Coordinator.Affinity != nil && instance.Spec.Coordinator.Affinity.NodeAffinity != nil &&
+				instance.Spec.Coordinator.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+
+				requiredTerms := make([]corev1.NodeSelectorTerm, len(instance.Spec.Coordinator.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms))
+
+				for i, term := range instance.Spec.Coordinator.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
+					requiredTerms[i] = corev1.NodeSelectorTerm{
+						MatchExpressions: []corev1.NodeSelectorRequirement{
+							{
+								Key:      term.MatchExpressions[0].Key,
+								Operator: term.MatchExpressions[0].Operator,
+								Values:   term.MatchExpressions[0].Values,
 							},
 						},
-					},
+					}
+				}
+
+				if dep.Spec.Template.Spec.Affinity.NodeAffinity == nil {
+					dep.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
+				}
+
+				dep.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{
+					NodeSelectorTerms: requiredTerms,
 				}
 			}
-			if instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+
+			if instance.Spec.Coordinator.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
 				preferredTerms := []corev1.PreferredSchedulingTerm{}
 
-				for _, term := range instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+				for _, term := range instance.Spec.Coordinator.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
 					preferredTerm := corev1.PreferredSchedulingTerm{
 						Weight: term.Weight,
 						Preference: corev1.NodeSelectorTerm{
@@ -276,6 +305,118 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 				dep.Spec.Template.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
 			}
 		}
+
+		if instance.Spec.Coordinator.Affinity.PodAffinity != nil {
+			dep.Spec.Template.Spec.Affinity.PodAffinity = &corev1.PodAffinity{}
+			if instance.Spec.Coordinator.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+				requiredTerms := []corev1.PodAffinityTerm{}
+
+				for _, term := range instance.Spec.Coordinator.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
+					requiredTerm := corev1.PodAffinityTerm{
+						Namespaces:        term.Namespaces,
+						TopologyKey:       term.TopologyKey,
+						NamespaceSelector: term.NamespaceSelector,
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      term.LabelSelector.MatchExpressions[0].Key,
+									Operator: term.LabelSelector.MatchExpressions[0].Operator,
+									Values:   term.LabelSelector.MatchExpressions[0].Values,
+								},
+							},
+						},
+					}
+
+					requiredTerms = append(requiredTerms, requiredTerm)
+				}
+
+				dep.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = requiredTerms
+			}
+
+			if instance.Spec.Coordinator.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+				preferredTerms := []corev1.WeightedPodAffinityTerm{}
+
+				for _, term := range instance.Spec.Coordinator.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+					preferredTerm := corev1.WeightedPodAffinityTerm{
+						Weight: term.Weight,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							Namespaces:        term.PodAffinityTerm.Namespaces,
+							TopologyKey:       term.PodAffinityTerm.TopologyKey,
+							NamespaceSelector: term.PodAffinityTerm.NamespaceSelector,
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Key,
+										Operator: term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Operator,
+										Values:   term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Values,
+									},
+								},
+							},
+						},
+					}
+
+					preferredTerms = append(preferredTerms, preferredTerm)
+				}
+
+				dep.Spec.Template.Spec.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+			}
+		}
+
+		if instance.Spec.Coordinator.Affinity.PodAntiAffinity != nil {
+			dep.Spec.Template.Spec.Affinity.PodAntiAffinity = &corev1.PodAntiAffinity{}
+			if instance.Spec.Coordinator.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+				requiredTerms := []corev1.PodAffinityTerm{}
+
+				for _, term := range instance.Spec.Coordinator.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
+					requiredTerm := corev1.PodAffinityTerm{
+						Namespaces:        term.Namespaces,
+						TopologyKey:       term.TopologyKey,
+						NamespaceSelector: term.NamespaceSelector,
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      term.LabelSelector.MatchExpressions[0].Key,
+									Operator: term.LabelSelector.MatchExpressions[0].Operator,
+									Values:   term.LabelSelector.MatchExpressions[0].Values,
+								},
+							},
+						},
+					}
+
+					requiredTerms = append(requiredTerms, requiredTerm)
+				}
+
+				dep.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = requiredTerms
+			}
+
+			if instance.Spec.Coordinator.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+				preferredTerms := []corev1.WeightedPodAffinityTerm{}
+
+				for _, term := range instance.Spec.Coordinator.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+					preferredTerm := corev1.WeightedPodAffinityTerm{
+						Weight: term.Weight,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							Namespaces:        term.PodAffinityTerm.Namespaces,
+							TopologyKey:       term.PodAffinityTerm.TopologyKey,
+							NamespaceSelector: term.PodAffinityTerm.NamespaceSelector,
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Key,
+										Operator: term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Operator,
+										Values:   term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Values,
+									},
+								},
+							},
+						},
+					}
+
+					preferredTerms = append(preferredTerms, preferredTerm)
+				}
+
+				dep.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+			}
+		}
 	}
 
 	err := ctrl.SetControllerReference(instance, dep, schema)
@@ -286,23 +427,48 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 	return dep
 }
 
-func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.Deployment {
-	labels := instance.GetLabels()
+func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.Trino) error {
 
-	dep := &appsv1.Deployment{
+	obj := r.makeCoordinatorDeployment(instance, r.Scheme)
+	if obj == nil {
+		return nil
+	}
+
+	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
+		r.Log.Error(err, "Failed to create or update coordinator Deployment")
+		return err
+	}
+
+	return nil
+}
+
+func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.DaemonSet {
+	labels := instance.GetLabels()
+	additionalLabels := map[string]string{
+		"app": instance.GetNameWithSuffix("worker"),
+	}
+
+	mergedLabels := make(map[string]string)
+	for key, value := range labels {
+		mergedLabels[key] = value
+	}
+	for key, value := range additionalLabels {
+		mergedLabels[key] = value
+	}
+
+	app := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.GetNameWithSuffix("worker"),
 			Namespace: instance.Namespace,
-			Labels:    labels,
+			Labels:    mergedLabels,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &instance.Spec.Server.Worker,
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: mergedLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: mergedLabels,
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext: instance.Spec.SecurityContext,
@@ -311,7 +477,7 @@ func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, sc
 							Name:            instance.GetNameWithSuffix("worker"),
 							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
 							ImagePullPolicy: instance.Spec.Image.PullPolicy,
-							Resources:       *instance.Spec.Resources,
+							Resources:       *instance.Spec.Worker.Resources,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 18080,
@@ -372,29 +538,58 @@ func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, sc
 		},
 	}
 
-	if instance.Spec.Affinity != nil {
-		dep.Spec.Template.Spec.Affinity = &corev1.Affinity{}
-		if instance.Spec.Affinity.NodeAffinity != nil {
-			dep.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
-			if instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
-				dep.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{
-					NodeSelectorTerms: []corev1.NodeSelectorTerm{
-						{
-							MatchExpressions: []corev1.NodeSelectorRequirement{
-								{
-									Key:      instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key,
-									Operator: instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Operator,
-									Values:   instance.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Values,
-								},
+	if instance.Spec.Worker.NodeSelector != nil {
+		app.Spec.Template.Spec.NodeSelector = instance.Spec.Worker.NodeSelector
+	}
+
+	if instance.Spec.Tolerations != nil {
+		toleration := *instance.Spec.Tolerations
+
+		app.Spec.Template.Spec.Tolerations = []corev1.Toleration{
+			{
+				Key:               toleration.Key,
+				Operator:          toleration.Operator,
+				Value:             toleration.Value,
+				Effect:            toleration.Effect,
+				TolerationSeconds: toleration.TolerationSeconds,
+			},
+		}
+	}
+
+	if instance.Spec.Worker.Affinity != nil {
+		app.Spec.Template.Spec.Affinity = &corev1.Affinity{}
+		if instance.Spec.Worker.Affinity.NodeAffinity != nil {
+			app.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
+			if instance.Spec.Worker.Affinity != nil && instance.Spec.Worker.Affinity.NodeAffinity != nil &&
+				instance.Spec.Worker.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+
+				requiredTerms := make([]corev1.NodeSelectorTerm, len(instance.Spec.Worker.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms))
+
+				for i, term := range instance.Spec.Worker.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
+					requiredTerms[i] = corev1.NodeSelectorTerm{
+						MatchExpressions: []corev1.NodeSelectorRequirement{
+							{
+								Key:      term.MatchExpressions[0].Key,
+								Operator: term.MatchExpressions[0].Operator,
+								Values:   term.MatchExpressions[0].Values,
 							},
 						},
-					},
+					}
+				}
+
+				if app.Spec.Template.Spec.Affinity.NodeAffinity == nil {
+					app.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
+				}
+
+				app.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{
+					NodeSelectorTerms: requiredTerms,
 				}
 			}
-			if instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+
+			if instance.Spec.Worker.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
 				preferredTerms := []corev1.PreferredSchedulingTerm{}
 
-				for _, term := range instance.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+				for _, term := range instance.Spec.Worker.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
 					preferredTerm := corev1.PreferredSchedulingTerm{
 						Weight: term.Weight,
 						Preference: corev1.NodeSelectorTerm{
@@ -411,17 +606,129 @@ func (r *TrinoReconciler) makeWorkerDeployment(instance *stackv1alpha1.Trino, sc
 					preferredTerms = append(preferredTerms, preferredTerm)
 				}
 
-				dep.Spec.Template.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+				app.Spec.Template.Spec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+			}
+		}
+
+		if instance.Spec.Worker.Affinity.PodAffinity != nil {
+			app.Spec.Template.Spec.Affinity.PodAffinity = &corev1.PodAffinity{}
+			if instance.Spec.Worker.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+				requiredTerms := []corev1.PodAffinityTerm{}
+
+				for _, term := range instance.Spec.Worker.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
+					requiredTerm := corev1.PodAffinityTerm{
+						Namespaces:        term.Namespaces,
+						TopologyKey:       term.TopologyKey,
+						NamespaceSelector: term.NamespaceSelector,
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      term.LabelSelector.MatchExpressions[0].Key,
+									Operator: term.LabelSelector.MatchExpressions[0].Operator,
+									Values:   term.LabelSelector.MatchExpressions[0].Values,
+								},
+							},
+						},
+					}
+
+					requiredTerms = append(requiredTerms, requiredTerm)
+				}
+
+				app.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = requiredTerms
+			}
+
+			if instance.Spec.Worker.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+				preferredTerms := []corev1.WeightedPodAffinityTerm{}
+
+				for _, term := range instance.Spec.Worker.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+					preferredTerm := corev1.WeightedPodAffinityTerm{
+						Weight: term.Weight,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							Namespaces:        term.PodAffinityTerm.Namespaces,
+							TopologyKey:       term.PodAffinityTerm.TopologyKey,
+							NamespaceSelector: term.PodAffinityTerm.NamespaceSelector,
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Key,
+										Operator: term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Operator,
+										Values:   term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Values,
+									},
+								},
+							},
+						},
+					}
+
+					preferredTerms = append(preferredTerms, preferredTerm)
+				}
+
+				app.Spec.Template.Spec.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
+			}
+		}
+
+		if instance.Spec.Worker.Affinity.PodAntiAffinity != nil {
+			app.Spec.Template.Spec.Affinity.PodAntiAffinity = &corev1.PodAntiAffinity{}
+			if instance.Spec.Worker.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+				requiredTerms := []corev1.PodAffinityTerm{}
+
+				for _, term := range instance.Spec.Worker.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
+					requiredTerm := corev1.PodAffinityTerm{
+						Namespaces:        term.Namespaces,
+						TopologyKey:       term.TopologyKey,
+						NamespaceSelector: term.NamespaceSelector,
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      term.LabelSelector.MatchExpressions[0].Key,
+									Operator: term.LabelSelector.MatchExpressions[0].Operator,
+									Values:   term.LabelSelector.MatchExpressions[0].Values,
+								},
+							},
+						},
+					}
+
+					requiredTerms = append(requiredTerms, requiredTerm)
+				}
+
+				app.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = requiredTerms
+			}
+
+			if instance.Spec.Worker.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
+				preferredTerms := []corev1.WeightedPodAffinityTerm{}
+
+				for _, term := range instance.Spec.Worker.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+					preferredTerm := corev1.WeightedPodAffinityTerm{
+						Weight: term.Weight,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							Namespaces:        term.PodAffinityTerm.Namespaces,
+							TopologyKey:       term.PodAffinityTerm.TopologyKey,
+							NamespaceSelector: term.PodAffinityTerm.NamespaceSelector,
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Key,
+										Operator: term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Operator,
+										Values:   term.PodAffinityTerm.LabelSelector.MatchExpressions[0].Values,
+									},
+								},
+							},
+						},
+					}
+
+					preferredTerms = append(preferredTerms, preferredTerm)
+				}
+
+				app.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = preferredTerms
 			}
 		}
 	}
 
-	err := ctrl.SetControllerReference(instance, dep, schema)
+	err := ctrl.SetControllerReference(instance, app, schema)
 	if err != nil {
-		r.Log.Error(err, "Failed to set controller reference for deployment")
+		r.Log.Error(err, "Failed to set controller reference for daemonset")
 		return nil
 	}
-	return dep
+	return app
 }
 
 func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.Trino, status metav1.ConditionStatus, message string) error {
@@ -440,32 +747,18 @@ func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Contex
 	return nil
 }
 
-func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance *stackv1alpha1.Trino) error {
 
-	CoordinatorDeployment := r.makeCoordinatorDeployment(instance, r.Scheme)
-	if CoordinatorDeployment == nil {
-		return nil
-	}
-	WorkerDeployment := r.makeWorkerDeployment(instance, r.Scheme)
-	if WorkerDeployment == nil {
+	obj := r.makeWorkerDaemonSet(instance, r.Scheme)
+	if obj == nil {
 		return nil
 	}
 
-	coordinatorDeployment := r.makeCoordinatorDeployment(instance, r.Scheme)
-	if coordinatorDeployment != nil {
-		if err := CreateOrUpdate(ctx, r.Client, coordinatorDeployment); err != nil {
-			r.Log.Error(err, "Failed to create or update coordinator Deployment")
-			return err
-		}
+	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
+		r.Log.Error(err, "Failed to create or update  DaemonSet")
+		return err
 	}
 
-	workerDeployment := r.makeWorkerDeployment(instance, r.Scheme)
-	if workerDeployment != nil {
-		if err := CreateOrUpdate(ctx, r.Client, workerDeployment); err != nil {
-			r.Log.Error(err, "Failed to create or update worker Deployment")
-			return err
-		}
-	}
 	return nil
 }
 
