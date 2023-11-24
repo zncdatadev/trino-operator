@@ -38,6 +38,10 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              catalogs:
+                additionalProperties:
+                  type: string
+                type: object
               coordinator:
                 properties:
                   affinity:
