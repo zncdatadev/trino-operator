@@ -3,14 +3,18 @@ package controller
 import (
 	"context"
 	"fmt"
+	hive "github.com/zncdata-labs/hive-metastore-operator/api/v1alpha1"
 	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+	"strings"
 )
 
 func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *v1.Ingress {
@@ -136,8 +140,36 @@ func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv
 	return nil
 }
 
+func NewControllerRuntimeClient() client.Client {
+	config := ctrl.GetConfigOrDie()
+
+	s := scheme.Scheme
+	hive.AddToScheme(s)
+	c, err := client.New(config, client.Options{Scheme: s})
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+func (r *TrinoReconciler) GetHiveMetastoreList(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (string, int32) {
+	c := NewControllerRuntimeClient()
+	list := &hive.HiveMetastoreList{}
+	err := c.List(context.Background(), list)
+	if err != nil {
+		panic(err)
+	}
+	Item := list.Items[0]
+	hiveName := Item.GetName()
+	hivePort := Item.Spec.Service.Port
+	return hiveName, hivePort
+}
+
 func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
+
+	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
+
 	additionalLabels := map[string]string{
 		"component": "coordinator",
 	}
@@ -194,6 +226,18 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 									Name:      "schemas-volume",
 									MountPath: "/etc/trino/schemas",
 								},
+							},
+						},
+					},
+					InitContainers: []corev1.Container{
+						{
+							Name:            instance.GetNameWithSuffix("init"),
+							Image:           "quay.io/plutoso/alpine-tools:latest",
+							ImagePullPolicy: instance.Spec.Image.PullPolicy,
+							Args: []string{
+								"sh",
+								"-c",
+								"telnet" + " " + hiveName + " " + strconv.Itoa(int(hivePort)),
 							},
 						},
 					},
@@ -904,13 +948,54 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.Trino, sch
 	return &cm
 }
 
+// 缩进属性
+func indentProperties(properties string, spaces int) string {
+	indented := ""
+	for _, line := range splitLines(properties) {
+		indented += fmt.Sprintf("%s%s\n", strings.Repeat("", spaces), line)
+	}
+	return indented
+}
+
+// 按行拆分字符串
+func splitLines(s string) []string {
+	var lines []string
+	for _, line := range strings.Split(s, "\n") {
+		lines = append(lines, strings.TrimSpace(line))
+	}
+	return lines
+}
+
 func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
+
+	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
+
 	tpchProps := "connector.name=tpch\n" +
 		"tpch.splits-per-node=4\n"
 
 	tpcdsProps := "connector.name=tpcds\n" +
 		"tpcds.splits-per-node=4\n"
+
+	icebergProps := "connector.name=iceberg\n" +
+		"iceberg.catalog.type=hive_metastore\n" +
+		"hive.metastore.uri=thrift://" + hiveName + " " + strconv.Itoa(int(hivePort)) + "\n"
+
+	additionalCatalogs := make(map[string]string)
+	for catalogName, catalogProperties := range instance.Spec.Catalogs {
+		key := fmt.Sprintf("%s.properties", catalogName)
+		additionalCatalogs[key] = fmt.Sprintf("%s\n", indentProperties(catalogProperties, 4))
+	}
+
+	data := map[string]string{
+		"tpch.properties":    tpchProps,
+		"tpcds.properties":   tpcdsProps,
+		"iceberg.properties": icebergProps,
+	}
+
+	for key, value := range additionalCatalogs {
+		data[key] = value
+	}
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -918,10 +1003,7 @@ func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, sc
 			Namespace: instance.Namespace,
 			Labels:    labels,
 		},
-		Data: map[string]string{
-			"tpch.properties":  tpchProps,
-			"tpcds.properties": tpcdsProps,
-		},
+		Data: data,
 	}
 	err := ctrl.SetControllerReference(instance, &cm, schema)
 	if err != nil {

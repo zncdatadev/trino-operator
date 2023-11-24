@@ -63,6 +63,9 @@ type TrinoSpec struct {
 
 	// +kubebuilder:validation:Required
 	Worker *WorkerSpec `json:"worker"`
+
+	// +kubebuilder:validation:Optional
+	Catalogs map[string]string `json:"catalogs"`
 }
 
 func (r *Trino) GetNameWithSuffix(suffix string) string {
