@@ -979,7 +979,7 @@ func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, sc
 
 	icebergProps := "connector.name=iceberg\n" +
 		"iceberg.catalog.type=hive_metastore\n" +
-		"hive.metastore.uri=thrift://" + hiveName + " " + strconv.Itoa(int(hivePort)) + "\n"
+		"hive.metastore.uri=thrift://" + hiveName + ":" + strconv.Itoa(int(hivePort)) + "\n"
 
 	additionalCatalogs := make(map[string]string)
 	for catalogName, catalogProperties := range instance.Spec.Catalogs {
