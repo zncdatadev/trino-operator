@@ -38,6 +38,7 @@ type TrinoReconciler struct {
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=stack.zncdata.net,resources=hivemetastores,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete

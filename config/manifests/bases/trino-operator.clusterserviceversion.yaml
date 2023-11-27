@@ -3,11 +3,11 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     alm-examples: '[]'
-    categories: Compute
-    datasuit: 'Develop, Analysis, Governance'
-    icon: https://trino.io/favicon.ico
     capabilities: Basic Install
-    dependencies: 'hive-metastore-operator, alluxio-operator'
+    categories: Compute
+    datasuit: Develop, Analysis, Governance
+    dependencies: hive-metastore-operator
+    icon: https://trino.io/favicon.ico
   name: trino-operator.v0.0.0
   namespace: placeholder
 spec:
