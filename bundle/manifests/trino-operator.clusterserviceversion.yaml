@@ -26,6 +26,12 @@ metadata:
                 "gcHeapRegionSize": "32M",
                 "gcMethodType": "UseG1GC",
                 "maxHeapSize": "8G"
+              },
+              "resources": {
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "512Mi"
+                }
               }
             },
             "image": {
@@ -42,12 +48,6 @@ metadata:
               "host": "trino.example.com"
             },
             "replicas": 1,
-            "resources": {
-              "requests": {
-                "cpu": "100m",
-                "memory": "512Mi"
-              }
-            },
             "securityContext": {
               "fsGroup": 1000,
               "runAsUser": 1000
@@ -67,17 +67,38 @@ metadata:
                 "dataDir": "/data/trino",
                 "environment": "production",
                 "pluginDir": "/usr/lib/trino/plugin"
-              }
+              },
+              "worker": 1
             },
             "service": {
-              "port": 18000,
+              "port": 18080,
               "type": "ClusterIP"
+            },
+            "worker": {
+              "config": {
+                "queryMaxMemoryPerNode": "1GB"
+              },
+              "jvm": {
+                "gcHeapRegionSize": "32M",
+                "gcMethodType": "UseG1GC",
+                "maxHeapSize": "8G"
+              },
+              "resources": {
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "512Mi"
+                }
+              }
             }
           }
         }
       ]
     capabilities: Basic Install
-    createdAt: "2023-11-15T03:36:12Z"
+    categories: Compute
+    createdAt: "2023-11-27T11:52:10Z"
+    datasuit: Develop, Analysis, Governance
+    dependencies: hive-metastore-operator
+    icon: https://trino.io/favicon.ico
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4-alpha
   name: trino-operator.v0.0.1-alpha
@@ -98,6 +119,18 @@ spec:
     spec:
       clusterPermissions:
       - rules:
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apps
           resources:

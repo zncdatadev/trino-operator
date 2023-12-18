@@ -177,6 +177,9 @@ type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
 
+	// +kubebuilder:validation:Optional
+	Tolerations *corev1.Toleration `json:"tolerations"`
+
 	// +kubebuilder:validation:Required
 	Resources *corev1.ResourceRequirements `json:"resources"`
 
@@ -214,6 +217,9 @@ type WorkerSpec struct {
 
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Optional
+	Tolerations *corev1.Toleration `json:"tolerations"`
 
 	// +kubebuilder:validation:Required
 	Resources *corev1.ResourceRequirements `json:"resources"`

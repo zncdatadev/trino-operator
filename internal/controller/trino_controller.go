@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -38,12 +39,13 @@ type TrinoReconciler struct {
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=stack.zncdata.net,resources=hivemetastores,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

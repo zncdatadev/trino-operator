@@ -2,18 +2,9 @@ dependencies:
   - type: olm.package
     value:
       packageName: hive-metastore-operator
-      version: "0.0.1-alpha"
+      version: ">=0.0.1-alpha"
   - type: olm.gvk
     value:
       group: stack.zncdata.net
       kind: HiveMetastore
-      version: v1alpha1
-  - type: olm.package
-    value:
-      packageName: alluxio-operator
-      version: "0.0.1-alpha"
-  - type: olm.gvk
-    value:
-      group: stack.zncdata.net
-      kind: Alluxio
       version: v1alpha1
