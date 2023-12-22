@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/zncdata-labs/operator-go/pkg/status"
 	"strconv"
 	"strings"
 
@@ -18,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *v1.Ingress {
+func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*v1.Ingress, error) {
 	labels := instance.GetLabels()
 
 	pt := v1.PathTypeImplementationSpecific
@@ -58,15 +59,15 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.Trino, schema *run
 	err := ctrl.SetControllerReference(instance, ing, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for ingress")
-		return nil
+		return nil, err
 	}
-	return ing
+	return ing, nil
 }
 
 func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv1alpha1.Trino) error {
-	obj := r.makeIngress(instance, r.Scheme)
-	if obj == nil {
-		return nil
+	obj, err := r.makeIngress(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
 	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
@@ -77,7 +78,7 @@ func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv
 	if instance.Spec.Ingress.Enabled {
 		url := fmt.Sprintf("http://%s", instance.Spec.Ingress.Host)
 		if instance.Status.URLs == nil {
-			instance.Status.URLs = []stackv1alpha1.StatusURL{
+			instance.Status.URLs = []status.URL{
 				{
 					Name: "webui",
 					URL:  url,
@@ -166,7 +167,7 @@ func (r *TrinoReconciler) GetHiveMetastoreList(instance *stackv1alpha1.Trino, sc
 	return hiveName, hivePort
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*appsv1.Deployment, error) {
 	labels := instance.GetLabels()
 
 	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
@@ -284,16 +285,16 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for deployment")
-		return nil
+		return nil, err
 	}
-	return dep
+	return dep, err
 }
 
 func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.Trino) error {
 
-	obj := r.makeCoordinatorDeployment(instance, r.Scheme)
-	if obj == nil {
-		return nil
+	obj, err := r.makeCoordinatorDeployment(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
 	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
@@ -304,7 +305,7 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 	return nil
 }
 
-func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.DaemonSet {
+func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*appsv1.DaemonSet, error) {
 	labels := instance.GetLabels()
 	additionalLabels := map[string]string{
 		"app": instance.GetNameWithSuffix("worker"),
@@ -405,9 +406,9 @@ func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.Trino, sch
 	err := ctrl.SetControllerReference(instance, app, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for daemonset")
-		return nil
+		return nil, err
 	}
-	return app
+	return app, nil
 }
 
 func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.Trino, status metav1.ConditionStatus, message string) error {
@@ -428,9 +429,9 @@ func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Contex
 
 func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance *stackv1alpha1.Trino) error {
 
-	obj := r.makeWorkerDaemonSet(instance, r.Scheme)
-	if obj == nil {
-		return nil
+	obj, err := r.makeWorkerDaemonSet(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
 	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
@@ -441,7 +442,7 @@ func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance
 	return nil
 }
 
-func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*corev1.ConfigMap, error) {
 	labels := instance.GetLabels()
 
 	nodeProps := "node.environment=" + instance.Spec.Server.Node.Environment + "\n" +
@@ -510,12 +511,12 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 	err := ctrl.SetControllerReference(instance, &cm, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for configmap")
-		return nil
+		return nil, err
 	}
-	return &cm
+	return &cm, nil
 }
 
-func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*corev1.ConfigMap, error) {
 	labels := instance.GetLabels()
 
 	nodeProps := "node.environment=" + instance.Spec.Server.Node.Environment + "\n" +
@@ -578,9 +579,9 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.Trino, sch
 	err := ctrl.SetControllerReference(instance, &cm, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set worker reference for configmap")
-		return nil
+		return nil, err
 	}
-	return &cm
+	return &cm, nil
 }
 
 // 缩进属性
@@ -601,7 +602,7 @@ func splitLines(s string) []string {
 	return lines
 }
 
-func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*corev1.ConfigMap, error) {
 	labels := instance.GetLabels()
 
 	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
@@ -643,12 +644,12 @@ func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, sc
 	err := ctrl.SetControllerReference(instance, &cm, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set catalog reference for configmap")
-		return nil
+		return nil, err
 	}
-	return &cm
+	return &cm, nil
 }
 
-func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (*corev1.ConfigMap, error) {
 	labels := instance.GetLabels()
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -661,34 +662,40 @@ func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.Trino, sc
 	err := ctrl.SetControllerReference(instance, &cm, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set schemas reference for configmap")
-		return nil
+		return nil, err
 	}
-	return &cm
+	return &cm, nil
 }
 
 func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stackv1alpha1.Trino) error {
 
-	CoordinatorConfigMap := r.makeCoordinatorConfigMap(instance, r.Scheme)
-	if CoordinatorConfigMap == nil {
+	if instance.Status.IsAvailable() {
 		return nil
 	}
-
-	WorkerConfigMap := r.makeWorkerConfigMap(instance, r.Scheme)
-	if WorkerConfigMap == nil {
-		return nil
+	_, err := r.makeCoordinatorConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
-	CatalogConfigMap := r.makeCatalogConfigMap(instance, r.Scheme)
-	if CatalogConfigMap == nil {
-		return nil
+	_, err = r.makeWorkerConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
-	SchemasConfigMap := r.makeSchemasConfigMap(instance, r.Scheme)
-	if SchemasConfigMap == nil {
-		return nil
+	_, err = r.makeCatalogConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
-	coordinatorConfigMap := r.makeCoordinatorConfigMap(instance, r.Scheme)
+	_, err = r.makeSchemasConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
+	}
+
+	coordinatorConfigMap, err := r.makeCoordinatorConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
+	}
 	if coordinatorConfigMap != nil {
 		if err := CreateOrUpdate(ctx, r.Client, coordinatorConfigMap); err != nil {
 			r.Log.Error(err, "Failed to create or update coordinator configmap")
@@ -696,7 +703,10 @@ func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stac
 		}
 	}
 
-	workerConfigMap := r.makeWorkerConfigMap(instance, r.Scheme)
+	workerConfigMap, err := r.makeWorkerConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
+	}
 	if workerConfigMap != nil {
 		if err := CreateOrUpdate(ctx, r.Client, workerConfigMap); err != nil {
 			r.Log.Error(err, "Failed to create or update worker configmap")
@@ -704,7 +714,10 @@ func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stac
 		}
 	}
 
-	catalogConfigMap := r.makeCatalogConfigMap(instance, r.Scheme)
+	catalogConfigMap, err := r.makeCatalogConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
+	}
 	if catalogConfigMap != nil {
 		if err := CreateOrUpdate(ctx, r.Client, catalogConfigMap); err != nil {
 			r.Log.Error(err, "Failed to create or update catalog configmap")
@@ -712,7 +725,10 @@ func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stac
 		}
 	}
 
-	schemasConfigMap := r.makeSchemasConfigMap(instance, r.Scheme)
+	schemasConfigMap, err := r.makeSchemasConfigMap(instance, r.Scheme)
+	if err != nil {
+		return err
+	}
 	if schemasConfigMap != nil {
 		if err := CreateOrUpdate(ctx, r.Client, schemasConfigMap); err != nil {
 			r.Log.Error(err, "Failed to create or update schemas configmap")

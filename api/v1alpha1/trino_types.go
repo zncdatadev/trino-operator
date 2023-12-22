@@ -17,9 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/zncdata-labs/operator-go/pkg/image"
+	"github.com/zncdata-labs/operator-go/pkg/ingress"
+	"github.com/zncdata-labs/operator-go/pkg/service"
+	"github.com/zncdata-labs/operator-go/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,7 +32,7 @@ import (
 // TrinoSpec defines the desired state of Trino
 type TrinoSpec struct {
 	// +kubebuilder:validation:Required
-	Image *ImageSpec `json:"image"`
+	Image *image.ImageSpec `json:"image"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Minimum=1
@@ -44,13 +47,13 @@ type TrinoSpec struct {
 	Tolerations *corev1.Toleration `json:"tolerations"`
 
 	// +kubebuilder:validation:Optional
-	Service *ServiceSpec `json:"service"`
+	Service *service.ServiceSpec `json:"service"`
 
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels"`
 
 	// +kubebuilder:validation:Optional
-	Ingress *IngressSpec `json:"ingress"`
+	Ingress *ingress.IngressSpec `json:"ingress"`
 
 	// +kubebuilder:validation:Optional
 	Annotations map[string]string `json:"annotations"`
@@ -71,31 +74,6 @@ type TrinoSpec struct {
 func (r *Trino) GetNameWithSuffix(suffix string) string {
 	// return sparkHistory.GetName() + rand.String(5) + suffix
 	return r.GetName() + "-" + suffix
-}
-
-type ImageSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=trinodb/trino
-	Repository string `json:"repository"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="423"
-	Tag string `json:"tag,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=IfNotPresent
-	PullPolicy corev1.PullPolicy `json:"pullPolicy"`
-}
-
-type ServiceSpec struct {
-	// +kubebuilder:validation:Optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-	// +kubebuilder:validation:enum=ClusterIP;NodePort;LoadBalancer;ExternalName
-	// +kubebuilder:default=ClusterIP
-	Type corev1.ServiceType `json:"type"`
-
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:default=18080
-	Port int32 `json:"port"`
 }
 
 type IngressSpec struct {
@@ -256,53 +234,13 @@ type ConfigWrokerSpec struct {
 // If the condition already exists, it updates the condition; otherwise, it appends the condition.
 // If the condition status has changed, it updates the condition's LastTransitionTime.
 func (r *Trino) SetStatusCondition(condition metav1.Condition) {
-	// if the condition already exists, update it
-	existingCondition := apimeta.FindStatusCondition(r.Status.Conditions, condition.Type)
-	if existingCondition == nil {
-		condition.ObservedGeneration = r.GetGeneration()
-		condition.LastTransitionTime = metav1.Now()
-		r.Status.Conditions = append(r.Status.Conditions, condition)
-	} else if existingCondition.Status != condition.Status || existingCondition.Reason != condition.Reason || existingCondition.Message != condition.Message {
-		existingCondition.Status = condition.Status
-		existingCondition.Reason = condition.Reason
-		existingCondition.Message = condition.Message
-		existingCondition.ObservedGeneration = r.GetGeneration()
-		existingCondition.LastTransitionTime = metav1.Now()
-	}
+	r.Status.SetStatusCondition(condition)
 }
 
 // InitStatusConditions initializes the status conditions to the provided conditions.
 func (r *Trino) InitStatusConditions() {
-	r.Status.Conditions = []metav1.Condition{}
-	r.SetStatusCondition(metav1.Condition{
-		Type:               ConditionTypeProgressing,
-		Status:             metav1.ConditionTrue,
-		Reason:             ConditionReasonPreparing,
-		Message:            "SparkHistoryServer is preparing",
-		ObservedGeneration: r.GetGeneration(),
-		LastTransitionTime: metav1.Now(),
-	})
-	r.SetStatusCondition(metav1.Condition{
-		Type:               ConditionTypeAvailable,
-		Status:             metav1.ConditionFalse,
-		Reason:             ConditionReasonPreparing,
-		Message:            "SparkHistoryServer is preparing",
-		ObservedGeneration: r.GetGeneration(),
-		LastTransitionTime: metav1.Now(),
-	})
-}
-
-// TrinoStatus defines the observed state of Trino
-type TrinoStatus struct {
-	// +kubebuilder:validation:Optional
-	Conditions []metav1.Condition `json:"condition,omitempty"`
-	// +kubebuilder:validation:Optional
-	URLs []StatusURL `json:"urls,omitempty"`
-}
-
-type StatusURL struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	r.Status.InitStatus(r)
+	r.Status.InitStatusConditions()
 }
 
 //+kubebuilder:object:root=true
@@ -313,8 +251,8 @@ type Trino struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TrinoSpec   `json:"spec,omitempty"`
-	Status TrinoStatus `json:"status,omitempty"`
+	Spec   TrinoSpec            `json:"spec,omitempty"`
+	Status status.ZncdataStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
