@@ -8,8 +8,8 @@ metadata:
 spec:
   group: stack.zncdata.net
   names:
-    kind: Trino
-    listKind: TrinoList
+    kind: TrinoCluster
+    listKind: TrinoClusterList
     plural: trinoes
     singular: trino
   scope: Namespaced

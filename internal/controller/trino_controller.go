@@ -61,7 +61,7 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	r.Log.Info("Reconciling instance")
 
-	trino := &stackv1alpha1.Trino{}
+	trino := &stackv1alpha1.TrinoCluster{}
 
 	if err := r.Get(ctx, req.NamespacedName, trino); err != nil {
 		if client.IgnoreNotFound(err) != nil {
@@ -128,7 +128,7 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // UpdateStatus updates the status of the Trino resource
 // https://stackoverflow.com/questions/76388004/k8s-controller-update-status-and-condition
-func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		return r.Status().Update(ctx, instance)
 		//return r.Status().Patch(ctx, instance, client.MergeFrom(instance))
@@ -145,6 +145,6 @@ func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alp
 
 func (r *TrinoReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&stackv1alpha1.Trino{}).
+		For(&stackv1alpha1.TrinoCluster{}).
 		Complete(r)
 }

@@ -68,7 +68,7 @@ type TrinoSpec struct {
 	Catalogs map[string]string `json:"catalogs"`
 }
 
-func (r *Trino) GetNameWithSuffix(suffix string) string {
+func (r *TrinoCluster) GetNameWithSuffix(suffix string) string {
 	// return sparkHistory.GetName() + rand.String(5) + suffix
 	return r.GetName() + "-" + suffix
 }
@@ -255,7 +255,7 @@ type ConfigWrokerSpec struct {
 // SetStatusCondition updates the status condition using the provided arguments.
 // If the condition already exists, it updates the condition; otherwise, it appends the condition.
 // If the condition status has changed, it updates the condition's LastTransitionTime.
-func (r *Trino) SetStatusCondition(condition metav1.Condition) {
+func (r *TrinoCluster) SetStatusCondition(condition metav1.Condition) {
 	// if the condition already exists, update it
 	existingCondition := apimeta.FindStatusCondition(r.Status.Conditions, condition.Type)
 	if existingCondition == nil {
@@ -272,7 +272,7 @@ func (r *Trino) SetStatusCondition(condition metav1.Condition) {
 }
 
 // InitStatusConditions initializes the status conditions to the provided conditions.
-func (r *Trino) InitStatusConditions() {
+func (r *TrinoCluster) InitStatusConditions() {
 	r.Status.Conditions = []metav1.Condition{}
 	r.SetStatusCondition(metav1.Condition{
 		Type:               ConditionTypeProgressing,
@@ -309,7 +309,7 @@ type StatusURL struct {
 //+kubebuilder:subresource:status
 
 // Trino is the Schema for the trinoes API
-type Trino struct {
+type TrinoCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -319,13 +319,13 @@ type Trino struct {
 
 //+kubebuilder:object:root=true
 
-// TrinoList contains a list of Trino
-type TrinoList struct {
+// TrinoClusterList contains a list of Trino
+type TrinoClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Trino `json:"items"`
+	Items           []TrinoCluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Trino{}, &TrinoList{})
+	SchemeBuilder.Register(&TrinoCluster{}, &TrinoClusterList{})
 }

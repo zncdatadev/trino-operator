@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CoordinatorScheduler(instance *stackv1alpha1.Trino, dep *appsv1.Deployment) {
+func CoordinatorScheduler(instance *stackv1alpha1.TrinoCluster, dep *appsv1.Deployment) {
 
 	scheduler := instance.Spec.Coordinator
 	if scheduler.NodeSelector != nil {
@@ -196,7 +196,7 @@ func CoordinatorScheduler(instance *stackv1alpha1.Trino, dep *appsv1.Deployment)
 	}
 }
 
-func WorkerScheduler(instance *stackv1alpha1.Trino, app *appsv1.DaemonSet) {
+func WorkerScheduler(instance *stackv1alpha1.TrinoCluster, app *appsv1.DaemonSet) {
 
 	scheduler := instance.Spec.Worker
 	if scheduler.NodeSelector != nil {

@@ -16,7 +16,7 @@ spec:
     owned:
     - description: Trino is the Schema for the trinoes API
       displayName: Trino
-      kind: Trino
+      kind: TrinoCluster
       name: trinos.stack.zncdata.net
       version: v1alpha1
   description: trino for k8s operator

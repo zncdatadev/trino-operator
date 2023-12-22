@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *v1.Ingress {
+func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *v1.Ingress {
 	labels := instance.GetLabels()
 
 	pt := v1.PathTypeImplementationSpecific
@@ -63,7 +63,7 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.Trino, schema *run
 	return ing
 }
 
-func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 	obj := r.makeIngress(instance, r.Scheme)
 	if obj == nil {
 		return nil
@@ -97,7 +97,7 @@ func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv
 }
 
 // make service
-func (r *TrinoReconciler) makeService(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.Service {
+func (r *TrinoReconciler) makeService(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.Service {
 	labels := instance.GetLabels()
 	labels["component"] = "coordinator"
 
@@ -128,7 +128,7 @@ func (r *TrinoReconciler) makeService(instance *stackv1alpha1.Trino, schema *run
 	return svc
 }
 
-func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 	obj := r.makeService(instance, r.Scheme)
 	if obj == nil {
 		return nil
@@ -153,7 +153,7 @@ func NewControllerRuntimeClient() client.Client {
 	return c
 }
 
-func (r *TrinoReconciler) GetHiveMetastoreList(instance *stackv1alpha1.Trino, schema *runtime.Scheme) (string, int32) {
+func (r *TrinoReconciler) GetHiveMetastoreList(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) (string, int32) {
 	c := NewControllerRuntimeClient()
 	list := &hive.HiveMetastoreList{}
 	err := c.List(context.Background(), list)
@@ -166,7 +166,7 @@ func (r *TrinoReconciler) GetHiveMetastoreList(instance *stackv1alpha1.Trino, sc
 	return hiveName, hivePort
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
@@ -289,7 +289,7 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 	return dep
 }
 
-func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 
 	obj := r.makeCoordinatorDeployment(instance, r.Scheme)
 	if obj == nil {
@@ -304,7 +304,7 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 	return nil
 }
 
-func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *appsv1.DaemonSet {
+func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *appsv1.DaemonSet {
 	labels := instance.GetLabels()
 	additionalLabels := map[string]string{
 		"app": instance.GetNameWithSuffix("worker"),
@@ -410,7 +410,7 @@ func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.Trino, sch
 	return app
 }
 
-func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.Trino, status metav1.ConditionStatus, message string) error {
+func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster, status metav1.ConditionStatus, message string) error {
 	instance.SetStatusCondition(metav1.Condition{
 		Type:               stackv1alpha1.ConditionTypeProgressing,
 		Status:             status,
@@ -426,7 +426,7 @@ func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Contex
 	return nil
 }
 
-func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 
 	obj := r.makeWorkerDaemonSet(instance, r.Scheme)
 	if obj == nil {
@@ -441,7 +441,7 @@ func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance
 	return nil
 }
 
-func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
 	nodeProps := "node.environment=" + instance.Spec.Server.Node.Environment + "\n" +
@@ -515,7 +515,7 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 	return &cm
 }
 
-func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
 	nodeProps := "node.environment=" + instance.Spec.Server.Node.Environment + "\n" +
@@ -601,7 +601,7 @@ func splitLines(s string) []string {
 	return lines
 }
 
-func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
 	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
@@ -648,7 +648,7 @@ func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.Trino, sc
 	return &cm
 }
 
-func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.Trino, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -666,7 +666,7 @@ func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.Trino, sc
 	return &cm
 }
 
-func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stackv1alpha1.Trino) error {
+func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 
 	CoordinatorConfigMap := r.makeCoordinatorConfigMap(instance, r.Scheme)
 	if CoordinatorConfigMap == nil {

@@ -1,5 +1,5 @@
 apiVersion: stack.zncdata.net/v1alpha1
-kind: Trino
+kind: TrinoCluster
 metadata:
   labels:
     app.kubernetes.io/name: trino

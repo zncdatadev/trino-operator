@@ -17,7 +17,7 @@ resources:
   controller: true
   domain: zncdata.net
   group: stack
-  kind: Trino
+  kind: TrinoCluster
   path: github.com/zncdata-labs/trino-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

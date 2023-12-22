@@ -6,7 +6,7 @@ metadata:
       [
         {
           "apiVersion": "stack.zncdata.net/v1alpha1",
-          "kind": "Trino",
+          "kind": "TrinoCluster",
           "metadata": {
             "labels": {
               "app.kubernetes.io/created-by": "trino-operator",
@@ -107,7 +107,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: Trino
+    - kind: TrinoCluster
       name: trinoes.stack.zncdata.net
       version: v1alpha1
   description: trino for k8s operator
