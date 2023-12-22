@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/zncdata-labs/operator-go/pkg/errors"
+	"github.com/zncdata-labs/operator-go/pkg/status"
 	"strconv"
 	"strings"
 
@@ -15,7 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *v1.Ingress {
+func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) (*v1.Ingress, error) {
 	labels := instance.GetLabels()
 
 	pt := v1.PathTypeImplementationSpecific
@@ -55,15 +57,15 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, sche
 	err := ctrl.SetControllerReference(instance, ing, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for ingress")
-		return nil
+		return nil, errors.Wrap(err, "Failed to set controller reference for ingress")
 	}
-	return ing
+	return ing, nil
 }
 
 func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
-	obj := r.makeIngress(instance, r.Scheme)
-	if obj == nil {
-		return nil
+	obj, err := r.makeIngress(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
 	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
@@ -74,7 +76,7 @@ func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv
 	if instance.Spec.Ingress.Enabled {
 		url := fmt.Sprintf("http://%s", instance.Spec.Ingress.Host)
 		if instance.Status.URLs == nil {
-			instance.Status.URLs = []stackv1alpha1.StatusURL{
+			instance.Status.URLs = []status.URL{
 				{
 					Name: "webui",
 					URL:  url,
@@ -94,7 +96,7 @@ func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv
 }
 
 // make service
-func (r *TrinoReconciler) makeService(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.Service {
+func (r *TrinoReconciler) makeService(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) (*corev1.Service, error) {
 	labels := instance.GetLabels()
 	labels["component"] = "coordinator"
 
@@ -120,15 +122,15 @@ func (r *TrinoReconciler) makeService(instance *stackv1alpha1.TrinoCluster, sche
 	err := ctrl.SetControllerReference(instance, svc, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for service")
-		return nil
+		return nil, errors.Wrap(err, "Failed to set controller reference for service")
 	}
-	return svc
+	return svc, nil
 }
 
 func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
-	obj := r.makeService(instance, r.Scheme)
-	if obj == nil {
-		return nil
+	obj, err := r.makeService(instance, r.Scheme)
+	if err != nil {
+		return err
 	}
 
 	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {

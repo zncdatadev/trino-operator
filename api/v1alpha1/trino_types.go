@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/zncdata-labs/operator-go/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -269,53 +269,13 @@ type ConfigRGWorkerSpec struct {
 // If the condition already exists, it updates the condition; otherwise, it appends the condition.
 // If the condition status has changed, it updates the condition's LastTransitionTime.
 func (r *TrinoCluster) SetStatusCondition(condition metav1.Condition) {
-	// if the condition already exists, update it
-	existingCondition := apimeta.FindStatusCondition(r.Status.Conditions, condition.Type)
-	if existingCondition == nil {
-		condition.ObservedGeneration = r.GetGeneration()
-		condition.LastTransitionTime = metav1.Now()
-		r.Status.Conditions = append(r.Status.Conditions, condition)
-	} else if existingCondition.Status != condition.Status || existingCondition.Reason != condition.Reason || existingCondition.Message != condition.Message {
-		existingCondition.Status = condition.Status
-		existingCondition.Reason = condition.Reason
-		existingCondition.Message = condition.Message
-		existingCondition.ObservedGeneration = r.GetGeneration()
-		existingCondition.LastTransitionTime = metav1.Now()
-	}
+	r.Status.SetStatusCondition(condition)
 }
 
 // InitStatusConditions initializes the status conditions to the provided conditions.
 func (r *TrinoCluster) InitStatusConditions() {
-	r.Status.Conditions = []metav1.Condition{}
-	r.SetStatusCondition(metav1.Condition{
-		Type:               ConditionTypeProgressing,
-		Status:             metav1.ConditionTrue,
-		Reason:             ConditionReasonPreparing,
-		Message:            "SparkHistoryServer is preparing",
-		ObservedGeneration: r.GetGeneration(),
-		LastTransitionTime: metav1.Now(),
-	})
-	r.SetStatusCondition(metav1.Condition{
-		Type:               ConditionTypeAvailable,
-		Status:             metav1.ConditionFalse,
-		Reason:             ConditionReasonPreparing,
-		Message:            "SparkHistoryServer is preparing",
-		ObservedGeneration: r.GetGeneration(),
-		LastTransitionTime: metav1.Now(),
-	})
-}
-
-// TrinoStatus defines the observed state of Trino
-type TrinoStatus struct {
-	// +kubebuilder:validation:Optional
-	Conditions []metav1.Condition `json:"condition,omitempty"`
-	// +kubebuilder:validation:Optional
-	URLs []StatusURL `json:"urls,omitempty"`
-}
-
-type StatusURL struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	r.Status.InitStatus(r)
+	r.Status.InitStatusConditions()
 }
 
 //+kubebuilder:object:root=true
@@ -326,8 +286,8 @@ type TrinoCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TrinoSpec   `json:"spec,omitempty"`
-	Status TrinoStatus `json:"status,omitempty"`
+	Spec   TrinoSpec      `json:"spec,omitempty"`
+	Status *status.Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

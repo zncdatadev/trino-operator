@@ -18,11 +18,13 @@ package controller
 
 import (
 	"context"
+	"github.com/zncdata-labs/operator-go/pkg/status"
+	"github.com/zncdata-labs/operator-go/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -73,21 +75,36 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	// Get the status condition, if it exists and its generation is not the
-	//same as the SparkHistoryServer's generation, reset the status conditions
+	//same as the Trino's generation, reset the status conditions
 	readCondition := apimeta.FindStatusCondition(trino.Status.Conditions, stackv1alpha1.ConditionTypeProgressing)
 	if readCondition == nil || readCondition.ObservedGeneration != trino.GetGeneration() {
 		trino.InitStatusConditions()
 
 		if err := r.UpdateStatus(ctx, trino); err != nil {
+			r.Log.Error(err, "unable to update status for Trino")
 			return ctrl.Result{}, err
 		}
 	}
 
-	r.Log.Info("SparkHistoryServer found", "Name", trino.Name)
+	r.Log.Info("Trino found", "Name", trino.Name)
 
 	if err := r.reconcileDeployment(ctx, trino); err != nil {
 		r.Log.Error(err, "unable to reconcile Deployment")
 		return ctrl.Result{}, err
+	}
+
+	if updated := trino.Status.SetStatusCondition(metav1.Condition{
+		Type:               status.ConditionTypeReconcileDeployment,
+		Status:             metav1.ConditionTrue,
+		Reason:             status.ConditionReasonRunning,
+		Message:            "TrinoServer's deployment is running",
+		ObservedGeneration: trino.GetGeneration(),
+	}); updated {
+		err := utils.UpdateStatus(ctx, r.Client, trino)
+		if err != nil {
+			r.Log.Error(err, "unable to update status for Deployment")
+			return ctrl.Result{}, err
+		}
 	}
 
 	if err := r.reconcileService(ctx, trino); err != nil {
@@ -95,9 +112,36 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
+	if updated := trino.Status.SetStatusCondition(metav1.Condition{
+		Type:               status.ConditionTypeReconcileService,
+		Status:             metav1.ConditionTrue,
+		Reason:             status.ConditionReasonRunning,
+		Message:            "TrinoServer's service is running",
+		ObservedGeneration: trino.GetGeneration(),
+	}); updated {
+		err := utils.UpdateStatus(ctx, r.Client, trino)
+		if err != nil {
+			r.Log.Error(err, "unable to update status for Service")
+			return ctrl.Result{}, err
+		}
+	}
+
 	if err := r.reconcileIngress(ctx, trino); err != nil {
 		r.Log.Error(err, "unable to reconcile Ingress")
 		return ctrl.Result{}, err
+	}
+	if updated := trino.Status.SetStatusCondition(metav1.Condition{
+		Type:               status.ConditionTypeReconcileIngress,
+		Status:             metav1.ConditionTrue,
+		Reason:             status.ConditionReasonRunning,
+		Message:            "TrinoServer's ingress is running",
+		ObservedGeneration: trino.GetGeneration(),
+	}); updated {
+		err := utils.UpdateStatus(ctx, r.Client, trino)
+		if err != nil {
+			r.Log.Error(err, "unable to update status for Ingress")
+			return ctrl.Result{}, err
+		}
 	}
 
 	if err := r.reconcileConfigMap(ctx, trino); err != nil {
@@ -105,16 +149,20 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	trino.SetStatusCondition(metav1.Condition{
-		Type:               stackv1alpha1.ConditionTypeAvailable,
-		Status:             metav1.ConditionTrue,
-		Reason:             stackv1alpha1.ConditionReasonRunning,
-		Message:            "Trino is running",
-		ObservedGeneration: trino.GetGeneration(),
-	})
+	if !trino.Status.IsAvailable() {
 
-	if err := r.UpdateStatus(ctx, trino); err != nil {
-		return ctrl.Result{}, err
+		trino.SetStatusCondition(metav1.Condition{
+			Type:               stackv1alpha1.ConditionTypeAvailable,
+			Status:             metav1.ConditionTrue,
+			Reason:             stackv1alpha1.ConditionReasonRunning,
+			Message:            "Trino is running",
+			ObservedGeneration: trino.GetGeneration(),
+		})
+		if err := r.UpdateStatus(ctx, trino); err != nil {
+			r.Log.Error(err, "unable to update status for Trino")
+			return ctrl.Result{}, err
+		}
+
 	}
 
 	r.Log.Info("Successfully reconciled Trino")
