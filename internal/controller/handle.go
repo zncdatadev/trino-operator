@@ -6,16 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	hive "github.com/zncdata-labs/hive-metastore-operator/api/v1alpha1"
 	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *v1.Ingress {
@@ -141,41 +138,44 @@ func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv
 	return nil
 }
 
-func NewControllerRuntimeClient() client.Client {
-	config := ctrl.GetConfigOrDie()
+func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.TrinoCluster) []*appsv1.Deployment {
+	var deployments []*appsv1.Deployment
 
-	s := scheme.Scheme
-	hive.AddToScheme(s)
-	c, err := client.New(config, client.Options{Scheme: s})
-	if err != nil {
-		panic(err)
+	if instance.Spec.Coordinator.RoleGroups != nil {
+		for roleGroupName, roleGroup := range instance.Spec.Coordinator.RoleGroups {
+			if roleGroup != nil {
+				if instance.Spec.Coordinator.Selectors != nil {
+					for _, selectors := range instance.Spec.Coordinator.Selectors {
+						if selectors != nil {
+							dep := r.makeCoordinatorDeploymentForRoleGroup(instance, roleGroupName, roleGroup, selectors, r.Scheme)
+							if dep != nil {
+								deployments = append(deployments, dep)
+							}
+						}
+					}
+				}
+			}
+		}
 	}
-	return c
+
+	return deployments
 }
 
-func (r *TrinoReconciler) GetHiveMetastoreList(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) (string, int32) {
-	c := NewControllerRuntimeClient()
-	list := &hive.HiveMetastoreList{}
-	err := c.List(context.Background(), list)
-	if err != nil {
-		panic(err)
-	}
-	Item := list.Items[0]
-	hiveName := Item.GetName()
-	hivePort := Item.Spec.Service.Port
-	return hiveName, hivePort
-}
-
-func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, selectors *stackv1alpha1.SelectorCoordinatorSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
-	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
+	additionalLabels := make(map[string]string)
 
-	additionalLabels := map[string]string{
-		"component": "coordinator",
+	if instance.Spec.Coordinator.Selectors != nil {
+		for _, selectorSpec := range instance.Spec.Coordinator.Selectors {
+			if selectorSpec != nil && selectorSpec.Selector.MatchLabels != nil {
+				for k, v := range selectorSpec.Selector.MatchLabels {
+					additionalLabels[k] = v
+				}
+			}
+		}
 	}
 
-	// 创建 Deployment 对象并手动合并标签
 	mergedLabels := make(map[string]string)
 	for key, value := range labels {
 		mergedLabels[key] = value
@@ -186,12 +186,12 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.GetNameWithSuffix("coordinator"),
+			Name:      instance.GetNameWithSuffix("coordinator-" + roleGroupName),
 			Namespace: instance.Namespace,
 			Labels:    mergedLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &instance.Spec.Replicas,
+			Replicas: &roleGroup.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: mergedLabels,
 			},
@@ -206,7 +206,7 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 							Name:            instance.GetNameWithSuffix("coordinator"),
 							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
 							ImagePullPolicy: instance.Spec.Image.PullPolicy,
-							Resources:       *instance.Spec.Coordinator.Resources,
+							Resources:       *roleGroup.Config.Resources,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 18080,
@@ -230,15 +230,161 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 							},
 						},
 					},
-					InitContainers: []corev1.Container{
+					Volumes: []corev1.Volume{
 						{
-							Name:            instance.GetNameWithSuffix("init"),
-							Image:           "quay.io/plutoso/alpine-tools:latest",
+							Name: "config-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: instance.GetNameWithSuffix("coordinator"),
+									},
+								},
+							},
+						},
+						{
+							Name: "catalog-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: instance.GetNameWithSuffix("catalog"),
+									},
+								},
+							},
+						},
+						{
+							Name: "schemas-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: instance.GetNameWithSuffix("schemas"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	if &selectors.NodeSelector != nil {
+		dep.Spec.Template.Spec.NodeSelector = selectors.NodeSelector
+	}
+
+	CoordinatorScheduler(instance, dep, roleGroup)
+
+	err := ctrl.SetControllerReference(instance, dep, schema)
+	if err != nil {
+		r.Log.Error(err, "Failed to set controller reference for Coordinator deployment")
+		return nil
+	}
+	return dep
+}
+
+func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster, status metav1.ConditionStatus, message string) error {
+	instance.SetStatusCondition(metav1.Condition{
+		Type:               stackv1alpha1.ConditionTypeProgressing,
+		Status:             status,
+		Reason:             stackv1alpha1.ConditionReasonReconcileDeployment,
+		Message:            message,
+		ObservedGeneration: instance.GetGeneration(),
+		LastTransitionTime: metav1.Now(),
+	})
+
+	if err := r.UpdateStatus(ctx, instance); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoCluster) []*appsv1.Deployment {
+	var deployments []*appsv1.Deployment
+
+	if instance.Spec.Worker.RoleGroups != nil {
+		for roleGroupName, roleGroup := range instance.Spec.Worker.RoleGroups {
+			if roleGroup != nil {
+				if instance.Spec.Worker.Selectors != nil {
+					for _, selectors := range instance.Spec.Worker.Selectors {
+						if selectors != nil {
+							dep := r.makeWorkerDeploymentForRoleGroup(instance, roleGroupName, roleGroup, selectors, r.Scheme)
+							if dep != nil {
+								deployments = append(deployments, dep)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return deployments
+}
+
+func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, selectors *stackv1alpha1.SelectorWorkerSpec, schema *runtime.Scheme) *appsv1.Deployment {
+	labels := instance.GetLabels()
+
+	additionalLabels := make(map[string]string)
+
+	if instance.Spec.Worker.Selectors != nil {
+		for _, selectorSpec := range instance.Spec.Worker.Selectors {
+			if selectorSpec != nil && selectorSpec.Selector.MatchLabels != nil {
+				for k, v := range selectorSpec.Selector.MatchLabels {
+					additionalLabels[k] = v
+				}
+			}
+		}
+	}
+
+	mergedLabels := make(map[string]string)
+	for key, value := range labels {
+		mergedLabels[key] = value
+	}
+	for key, value := range additionalLabels {
+		mergedLabels[key] = value
+	}
+
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.GetNameWithSuffix("worker-" + roleGroupName),
+			Namespace: instance.Namespace,
+			Labels:    mergedLabels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &roleGroup.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: mergedLabels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: mergedLabels,
+				},
+				Spec: corev1.PodSpec{
+					SecurityContext: instance.Spec.SecurityContext,
+					Containers: []corev1.Container{
+						{
+							Name:            instance.GetNameWithSuffix("worker"),
+							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
 							ImagePullPolicy: instance.Spec.Image.PullPolicy,
-							Args: []string{
-								"sh",
-								"-c",
-								"telnet" + " " + hiveName + " " + strconv.Itoa(int(hivePort)),
+							Resources:       *roleGroup.Config.Resources,
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 18080,
+									Name:          "http",
+									Protocol:      "TCP",
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config-volume",
+									MountPath: "/etc/trino",
+								},
+								{
+									Name:      "catalog-volume",
+									MountPath: "/etc/trino/catalog",
+								},
+								{
+									Name:      "schemas-volume",
+									MountPath: "/etc/trino/schemas",
+								},
 							},
 						},
 					},
@@ -279,163 +425,45 @@ func (r *TrinoReconciler) makeCoordinatorDeployment(instance *stackv1alpha1.Trin
 		},
 	}
 
-	CoordinatorScheduler(instance, dep)
+	if selectors.NodeSelector != nil {
+		dep.Spec.Template.Spec.NodeSelector = selectors.NodeSelector
+	}
+
+	WorkerScheduler(instance, dep, roleGroup)
 
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
-		r.Log.Error(err, "Failed to set controller reference for deployment")
+		r.Log.Error(err, "Failed to set controller reference for worker deployment")
 		return nil
 	}
 	return dep
 }
 
 func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
+	// 处理协调器部署
+	coordinatorDeployments := r.makeCoordinatorDeployments(instance)
+	for _, dep := range coordinatorDeployments {
+		if dep == nil {
+			continue
+		}
 
-	obj := r.makeCoordinatorDeployment(instance, r.Scheme)
-	if obj == nil {
-		return nil
+		if err := CreateOrUpdate(ctx, r.Client, dep); err != nil {
+			r.Log.Error(err, "Failed to create or update coordinator Deployment", "deployment", dep.Name)
+			return err
+		}
 	}
 
-	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
-		r.Log.Error(err, "Failed to create or update coordinator Deployment")
-		return err
-	}
+	// 处理工作器部署
+	workerDeployments := r.makeWorkerDeployments(instance)
+	for _, dep := range workerDeployments {
+		if dep == nil {
+			continue
+		}
 
-	return nil
-}
-
-func (r *TrinoReconciler) makeWorkerDaemonSet(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *appsv1.DaemonSet {
-	labels := instance.GetLabels()
-	additionalLabels := map[string]string{
-		"app": instance.GetNameWithSuffix("worker"),
-	}
-
-	mergedLabels := make(map[string]string)
-	for key, value := range labels {
-		mergedLabels[key] = value
-	}
-	for key, value := range additionalLabels {
-		mergedLabels[key] = value
-	}
-
-	app := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.GetNameWithSuffix("worker"),
-			Namespace: instance.Namespace,
-			Labels:    mergedLabels,
-		},
-		Spec: appsv1.DaemonSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: mergedLabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: mergedLabels,
-				},
-				Spec: corev1.PodSpec{
-					SecurityContext: instance.Spec.SecurityContext,
-					Containers: []corev1.Container{
-						{
-							Name:            instance.GetNameWithSuffix("worker"),
-							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
-							ImagePullPolicy: instance.Spec.Image.PullPolicy,
-							Resources:       *instance.Spec.Worker.Resources,
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 18080,
-									Name:          "http",
-									Protocol:      "TCP",
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "config-volume",
-									MountPath: "/etc/trino",
-								},
-								{
-									Name:      "catalog-volume",
-									MountPath: "/etc/trino/catalog",
-								},
-								{
-									Name:      "schemas-volume",
-									MountPath: "/etc/trino/schemas",
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "config-volume",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetNameWithSuffix("worker"),
-									},
-								},
-							},
-						},
-						{
-							Name: "catalog-volume",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetNameWithSuffix("catalog"),
-									},
-								},
-							},
-						},
-						{
-							Name: "schemas-volume",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetNameWithSuffix("schemas"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	WorkerScheduler(instance, app)
-
-	err := ctrl.SetControllerReference(instance, app, schema)
-	if err != nil {
-		r.Log.Error(err, "Failed to set controller reference for daemonset")
-		return nil
-	}
-	return app
-}
-
-func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster, status metav1.ConditionStatus, message string) error {
-	instance.SetStatusCondition(metav1.Condition{
-		Type:               stackv1alpha1.ConditionTypeProgressing,
-		Status:             status,
-		Reason:             stackv1alpha1.ConditionReasonReconcileDeployment,
-		Message:            message,
-		ObservedGeneration: instance.GetGeneration(),
-		LastTransitionTime: metav1.Now(),
-	})
-
-	if err := r.UpdateStatus(ctx, instance); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
-
-	obj := r.makeWorkerDaemonSet(instance, r.Scheme)
-	if obj == nil {
-		return nil
-	}
-
-	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
-		r.Log.Error(err, "Failed to create or update  DaemonSet")
-		return err
+		if err := CreateOrUpdate(ctx, r.Client, dep); err != nil {
+			r.Log.Error(err, "Failed to create or update worker Deployment", "deployment", dep.Name)
+			return err
+		}
 	}
 
 	return nil
@@ -444,14 +472,14 @@ func (r *TrinoReconciler) reconcileWorkerDaemonSet(ctx context.Context, instance
 func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	nodeProps := "node.environment=" + instance.Spec.Server.Node.Environment + "\n" +
-		"node.data-dir=" + instance.Spec.Server.Node.DataDir + "\n" +
-		"plugin.dir=" + instance.Spec.Server.Node.PluginDir + "\n"
+	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Server.Node.Environment + "\n" +
+		"node.data-dir=" + instance.Spec.ClusterConfig.Server.Node.DataDir + "\n" +
+		"plugin.dir=" + instance.Spec.ClusterConfig.Server.Node.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
-		"-Xmx" + instance.Spec.Coordinator.Jvm.MaxHeapSize + "\n" +
-		"-XX:+" + instance.Spec.Coordinator.Jvm.GcMethodType + "\n" +
-		"-XX:G1HeapRegionSize=" + instance.Spec.Coordinator.Jvm.G1HeapRegionSize + "\n" +
+		"-Xmx" + instance.Spec.Coordinator.RoleConfig.Jvm.MaxHeapSize + "\n" +
+		"-XX:+" + instance.Spec.Coordinator.RoleConfig.Jvm.GcMethodType + "\n" +
+		"-XX:G1HeapRegionSize=" + instance.Spec.Coordinator.RoleConfig.Jvm.G1HeapRegionSize + "\n" +
 		"-XX:+UseGCOverheadLimit\n" +
 		"-XX:+ExplicitGCInvokesConcurrent\n" +
 		"-XX:+HeapDumpOnOutOfMemoryError\n" +
@@ -467,31 +495,31 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 
 	configProps := "coordinator=true\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
-		"query.max-memory=" + instance.Spec.Server.Config.QueryMaxMemory + "\n" +
-		"query.max-memory-per-node=" + instance.Spec.Coordinator.Config.QueryMaxMemoryPerNode + "\n" +
+		"query.max-memory=" + instance.Spec.ClusterConfig.Server.Config.QueryMaxMemory + "\n" +
+		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.Config.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://localhost:" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
-	if instance.Spec.Server.Worker > 0 {
+	if instance.Spec.ClusterConfig.Server.Worker > 0 {
 		configProps += "node-scheduler.include-coordinator=false" + "\n"
 	} else {
 		configProps += "node-scheduler.include-coordinator=true" + "\n"
 	}
 
-	if instance.Spec.Coordinator.Config.MemoryHeapHeadroomPerNode != "" {
-		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.Config.MemoryHeapHeadroomPerNode + "\n"
+	if instance.Spec.Coordinator.RoleConfig.Config.MemoryHeapHeadroomPerNode != "" {
+		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.RoleConfig.Config.MemoryHeapHeadroomPerNode + "\n"
 	}
 
-	if instance.Spec.Server.Config.AuthenticationType != "" {
-		configProps += "http-server.authentication.type=" + instance.Spec.Server.Config.AuthenticationType + "\n"
+	if instance.Spec.ClusterConfig.Server.Config.AuthenticationType != "" {
+		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Server.Config.AuthenticationType + "\n"
 	}
 
-	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.Server.ExchangeManager.Name + "\n"
+	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.Server.ExchangeManager.Name + "\n"
 
-	if instance.Spec.Server.ExchangeManager.Name == "filesystem" {
-		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.Server.ExchangeManager.BaseDir
+	if instance.Spec.ClusterConfig.Server.ExchangeManager.Name == "filesystem" {
+		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.ClusterConfig.Server.ExchangeManager.BaseDir
 	}
 
-	logProps := "io.trino=" + instance.Spec.Server.LogLevel + "\n"
+	logProps := "io.trino=" + instance.Spec.ClusterConfig.Server.LogLevel + "\n"
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -518,14 +546,14 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	nodeProps := "node.environment=" + instance.Spec.Server.Node.Environment + "\n" +
-		"node.data-dir=" + instance.Spec.Server.Node.DataDir + "\n" +
-		"plugin.dir=" + instance.Spec.Server.Node.PluginDir + "\n"
+	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Server.Node.Environment + "\n" +
+		"node.data-dir=" + instance.Spec.ClusterConfig.Server.Node.DataDir + "\n" +
+		"plugin.dir=" + instance.Spec.ClusterConfig.Server.Node.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
-		"-Xmx" + instance.Spec.Worker.Jvm.MaxHeapSize + "\n" +
-		"-XX:+" + instance.Spec.Worker.Jvm.GcMethodType + "\n" +
-		"-XX:G1HeapRegionSize=" + instance.Spec.Worker.Jvm.G1HeapRegionSize + "\n" +
+		"-Xmx" + instance.Spec.Worker.RoleConfig.Jvm.MaxHeapSize + "\n" +
+		"-XX:+" + instance.Spec.Worker.RoleConfig.Jvm.GcMethodType + "\n" +
+		"-XX:G1HeapRegionSize=" + instance.Spec.Worker.RoleConfig.Jvm.G1HeapRegionSize + "\n" +
 		"-XX:+UseGCOverheadLimit\n" +
 		"-XX:+ExplicitGCInvokesConcurrent\n" +
 		"-XX:+HeapDumpOnOutOfMemoryError\n" +
@@ -541,25 +569,25 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 
 	configProps := "coordinator=false\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
-		"query.max-memory=" + instance.Spec.Server.Config.QueryMaxMemory + "\n" +
-		"query.max-memory-per-node=" + instance.Spec.Worker.Config.QueryMaxMemoryPerNode + "\n" +
+		"query.max-memory=" + instance.Spec.ClusterConfig.Server.Config.QueryMaxMemory + "\n" +
+		"query.max-memory-per-node=" + instance.Spec.Worker.RoleConfig.Config.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://" + instance.Name + ":" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
-	if instance.Spec.Worker.Config.MemoryHeapHeadroomPerNode != "" {
-		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.Config.MemoryHeapHeadroomPerNode + "\n"
+	if instance.Spec.Worker.RoleConfig.Config.MemoryHeapHeadroomPerNode != "" {
+		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.RoleConfig.Config.MemoryHeapHeadroomPerNode + "\n"
 	}
 
-	if instance.Spec.Server.Config.AuthenticationType != "" {
-		configProps += "http-server.authentication.type=" + instance.Spec.Server.Config.AuthenticationType + "\n"
+	if instance.Spec.ClusterConfig.Server.Config.AuthenticationType != "" {
+		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Server.Config.AuthenticationType + "\n"
 	}
 
-	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.Server.ExchangeManager.Name + "\n"
+	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.Server.ExchangeManager.Name + "\n"
 
-	if instance.Spec.Server.ExchangeManager.Name == "filesystem" {
-		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.Server.ExchangeManager.BaseDir
+	if instance.Spec.ClusterConfig.Server.ExchangeManager.Name == "filesystem" {
+		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.ClusterConfig.Server.ExchangeManager.BaseDir
 	}
 
-	logProps := "io.trino=" + instance.Spec.Server.LogLevel + "\n"
+	logProps := "io.trino=" + instance.Spec.ClusterConfig.Server.LogLevel + "\n"
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -604,7 +632,7 @@ func splitLines(s string) []string {
 func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	hiveName, hivePort := r.GetHiveMetastoreList(instance, r.Scheme)
+	//hiveName, hivePort := r.GetHiveMetastoreList()
 
 	tpchProps := "connector.name=tpch\n" +
 		"tpch.splits-per-node=4\n"
@@ -612,20 +640,15 @@ func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.TrinoClus
 	tpcdsProps := "connector.name=tpcds\n" +
 		"tpcds.splits-per-node=4\n"
 
-	icebergProps := "connector.name=iceberg\n" +
-		"iceberg.catalog.type=hive_metastore\n" +
-		"hive.metastore.uri=thrift://" + hiveName + ":" + strconv.Itoa(int(hivePort)) + "\n"
-
 	additionalCatalogs := make(map[string]string)
-	for catalogName, catalogProperties := range instance.Spec.Catalogs {
+	for catalogName, catalogProperties := range instance.Spec.ClusterConfig.Catalogs {
 		key := fmt.Sprintf("%s.properties", catalogName)
 		additionalCatalogs[key] = fmt.Sprintf("%s\n", indentProperties(catalogProperties, 4))
 	}
 
 	data := map[string]string{
-		"tpch.properties":    tpchProps,
-		"tpcds.properties":   tpcdsProps,
-		"iceberg.properties": icebergProps,
+		"tpch.properties":  tpchProps,
+		"tpcds.properties": tpcdsProps,
 	}
 
 	for key, value := range additionalCatalogs {

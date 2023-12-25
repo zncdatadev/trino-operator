@@ -90,11 +90,6 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileWorkerDaemonSet(ctx, trino); err != nil {
-		r.Log.Error(err, "unable to reconcile DaemonSet")
-		return ctrl.Result{}, err
-	}
-
 	if err := r.reconcileService(ctx, trino); err != nil {
 		r.Log.Error(err, "unable to reconcile Service")
 		return ctrl.Result{}, err
