@@ -61,7 +61,14 @@ type ClusterConfigSpec struct {
 	Catalogs map[string]string `json:"catalogs"`
 
 	// +kubebuilder:validation:Optional
-	Server *ServerClusterConfigSpec `json:"server"`
+	// +kubebuilder:default:=2
+	Worker          int32                `json:"worker"`
+	Node            *NodeSpec            `json:"node,omitempty"`
+	Config          *ConfigServerSpec    `json:"config"`
+	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=INFO
+	LogLevel string `json:"logLevel"`
 }
 
 func (r *TrinoCluster) GetNameWithSuffix(suffix string) string {
@@ -105,18 +112,6 @@ type IngressSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="spark-history-server.example.com"
 	Host string `json:"host,omitempty"`
-}
-
-type ServerClusterConfigSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=2
-	Worker          int32                `json:"worker"`
-	Node            *NodeSpec            `json:"node,omitempty"`
-	Config          *ConfigServerSpec    `json:"config"`
-	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=INFO
-	LogLevel string `json:"logLevel"`
 }
 
 type ExchangeManagerSpec struct {
@@ -168,7 +163,7 @@ type HttpsSpec struct {
 
 type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	Selectors map[string]*SelectorCoordinatorSpec `json:"selectors"`
+	Selectors map[string]*SelectorSpec `json:"selectors"`
 
 	// +kubebuilder:validation:Optional
 	RoleConfig *RoleConfigCoordinatorSpec `json:"roleConfig"`
@@ -177,7 +172,7 @@ type CoordinatorSpec struct {
 	RoleGroups map[string]*RoleGroupCoordinatorSpec `json:"roleGroups"`
 }
 
-type SelectorCoordinatorSpec struct {
+type SelectorSpec struct {
 	// +kubebuilder:validation:Optional
 	Selector metav1.LabelSelector `json:"selector"`
 
@@ -187,13 +182,13 @@ type SelectorCoordinatorSpec struct {
 
 type RoleConfigCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	Jvm *JvmRoleConfigCoordinatorSpec `json:"jvm,omitempty"`
+	Jvm *JvmRCCoordinatorSpec `json:"jvm,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigRoleConfigCoordinatorSpec `json:"config"`
+	Config *ConfigRCCoordinatorSpec `json:"config"`
 }
 
-type JvmRoleConfigCoordinatorSpec struct {
+type JvmRCCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="8G"
 	MaxHeapSize string `json:"maxHeapSize"`
@@ -205,7 +200,7 @@ type JvmRoleConfigCoordinatorSpec struct {
 	G1HeapRegionSize string `json:"gcHeapRegionSize"`
 }
 
-type ConfigRoleConfigCoordinatorSpec struct {
+type ConfigRCCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
 	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
@@ -220,10 +215,10 @@ type RoleGroupCoordinatorSpec struct {
 	Replicas int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigDefaultRoleGroupCoordinatorSpec `json:"config"`
+	Config *ConfigRGCoordinatorSpec `json:"config"`
 }
 
-type ConfigDefaultRoleGroupCoordinatorSpec struct {
+type ConfigRGCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
 
@@ -236,7 +231,7 @@ type ConfigDefaultRoleGroupCoordinatorSpec struct {
 
 type WorkerSpec struct {
 	// +kubebuilder:validation:Optional
-	Selectors map[string]*SelectorWorkerSpec `json:"selectors"`
+	Selectors map[string]*SelectorSpec `json:"selectors"`
 
 	// +kubebuilder:validation:Optional
 	RoleConfig *RoleConfigWorkerSpec `json:"roleConfig"`
@@ -245,20 +240,12 @@ type WorkerSpec struct {
 	RoleGroups map[string]*RoleGroupsWorkerSpec `json:"roleGroups"`
 }
 
-type SelectorWorkerSpec struct {
-	// +kubebuilder:validation:Optional
-	Selector metav1.LabelSelector `json:"selector"`
-
-	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector"`
-}
-
 type RoleConfigWorkerSpec struct {
 	// +kubebuilder:validation:Optional
-	Jvm *JvmRoleConfigWorkerSpec `json:"jvm,omitempty"`
+	Jvm *JvmRCWorkerSpec `json:"jvm,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigRoleConfigWrokerSpec `json:"config"`
+	Config *ConfigRCWrokerSpec `json:"config"`
 }
 
 type RoleGroupsWorkerSpec struct {
@@ -267,10 +254,10 @@ type RoleGroupsWorkerSpec struct {
 	Replicas int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigDefaultRoleGroupWorkerSpec `json:"config"`
+	Config *ConfigRGWorkerSpec `json:"config"`
 }
 
-type ConfigDefaultRoleGroupWorkerSpec struct {
+type ConfigRGWorkerSpec struct {
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
 
@@ -281,7 +268,7 @@ type ConfigDefaultRoleGroupWorkerSpec struct {
 	Resources *corev1.ResourceRequirements `json:"resources"`
 }
 
-type JvmRoleConfigWorkerSpec struct {
+type JvmRCWorkerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="8G"
 	MaxHeapSize string `json:"maxHeapSize"`
@@ -293,7 +280,7 @@ type JvmRoleConfigWorkerSpec struct {
 	G1HeapRegionSize string `json:"gcHeapRegionSize"`
 }
 
-type ConfigRoleConfigWrokerSpec struct {
+type ConfigRCWrokerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
 	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`

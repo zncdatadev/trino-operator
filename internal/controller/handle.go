@@ -161,7 +161,7 @@ func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.Tri
 	return deployments
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, selectors *stackv1alpha1.SelectorCoordinatorSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, selectors *stackv1alpha1.SelectorSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
@@ -319,7 +319,7 @@ func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoClu
 	return deployments
 }
 
-func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, selectors *stackv1alpha1.SelectorWorkerSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, selectors *stackv1alpha1.SelectorSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
@@ -472,9 +472,9 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Server.Node.Environment + "\n" +
-		"node.data-dir=" + instance.Spec.ClusterConfig.Server.Node.DataDir + "\n" +
-		"plugin.dir=" + instance.Spec.ClusterConfig.Server.Node.PluginDir + "\n"
+	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Node.Environment + "\n" +
+		"node.data-dir=" + instance.Spec.ClusterConfig.Node.DataDir + "\n" +
+		"plugin.dir=" + instance.Spec.ClusterConfig.Node.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
 		"-Xmx" + instance.Spec.Coordinator.RoleConfig.Jvm.MaxHeapSize + "\n" +
@@ -495,11 +495,11 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 
 	configProps := "coordinator=true\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
-		"query.max-memory=" + instance.Spec.ClusterConfig.Server.Config.QueryMaxMemory + "\n" +
+		"query.max-memory=" + instance.Spec.ClusterConfig.Config.QueryMaxMemory + "\n" +
 		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.Config.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://localhost:" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
-	if instance.Spec.ClusterConfig.Server.Worker > 0 {
+	if instance.Spec.ClusterConfig.Worker > 0 {
 		configProps += "node-scheduler.include-coordinator=false" + "\n"
 	} else {
 		configProps += "node-scheduler.include-coordinator=true" + "\n"
@@ -509,17 +509,17 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.RoleConfig.Config.MemoryHeapHeadroomPerNode + "\n"
 	}
 
-	if instance.Spec.ClusterConfig.Server.Config.AuthenticationType != "" {
-		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Server.Config.AuthenticationType + "\n"
+	if instance.Spec.ClusterConfig.Config.AuthenticationType != "" {
+		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Config.AuthenticationType + "\n"
 	}
 
-	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.Server.ExchangeManager.Name + "\n"
+	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.ExchangeManager.Name + "\n"
 
-	if instance.Spec.ClusterConfig.Server.ExchangeManager.Name == "filesystem" {
-		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.ClusterConfig.Server.ExchangeManager.BaseDir
+	if instance.Spec.ClusterConfig.ExchangeManager.Name == "filesystem" {
+		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.ClusterConfig.ExchangeManager.BaseDir
 	}
 
-	logProps := "io.trino=" + instance.Spec.ClusterConfig.Server.LogLevel + "\n"
+	logProps := "io.trino=" + instance.Spec.ClusterConfig.LogLevel + "\n"
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -546,9 +546,9 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Server.Node.Environment + "\n" +
-		"node.data-dir=" + instance.Spec.ClusterConfig.Server.Node.DataDir + "\n" +
-		"plugin.dir=" + instance.Spec.ClusterConfig.Server.Node.PluginDir + "\n"
+	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Node.Environment + "\n" +
+		"node.data-dir=" + instance.Spec.ClusterConfig.Node.DataDir + "\n" +
+		"plugin.dir=" + instance.Spec.ClusterConfig.Node.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
 		"-Xmx" + instance.Spec.Worker.RoleConfig.Jvm.MaxHeapSize + "\n" +
@@ -569,7 +569,7 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 
 	configProps := "coordinator=false\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
-		"query.max-memory=" + instance.Spec.ClusterConfig.Server.Config.QueryMaxMemory + "\n" +
+		"query.max-memory=" + instance.Spec.ClusterConfig.Config.QueryMaxMemory + "\n" +
 		"query.max-memory-per-node=" + instance.Spec.Worker.RoleConfig.Config.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://" + instance.Name + ":" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
@@ -577,17 +577,17 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.RoleConfig.Config.MemoryHeapHeadroomPerNode + "\n"
 	}
 
-	if instance.Spec.ClusterConfig.Server.Config.AuthenticationType != "" {
-		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Server.Config.AuthenticationType + "\n"
+	if instance.Spec.ClusterConfig.Config.AuthenticationType != "" {
+		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Config.AuthenticationType + "\n"
 	}
 
-	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.Server.ExchangeManager.Name + "\n"
+	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.ExchangeManager.Name + "\n"
 
-	if instance.Spec.ClusterConfig.Server.ExchangeManager.Name == "filesystem" {
-		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.ClusterConfig.Server.ExchangeManager.BaseDir
+	if instance.Spec.ClusterConfig.ExchangeManager.Name == "filesystem" {
+		exchangeManagerProps += "exchange.base-directories=" + instance.Spec.ClusterConfig.ExchangeManager.BaseDir
 	}
 
-	logProps := "io.trino=" + instance.Spec.ClusterConfig.Server.LogLevel + "\n"
+	logProps := "io.trino=" + instance.Spec.ClusterConfig.LogLevel + "\n"
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

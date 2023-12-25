@@ -44,64 +44,61 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                  server:
+                  config:
                     properties:
-                      config:
+                      authenticationType:
+                        default: ""
+                        type: string
+                      https:
                         properties:
-                          authenticationType:
+                          enabled:
+                            default: false
+                            type: boolean
+                          keystorePath:
                             default: ""
                             type: string
-                          https:
-                            properties:
-                              enabled:
-                                default: false
-                                type: boolean
-                              keystorePath:
-                                default: ""
-                                type: string
-                              port:
-                                default: 8443
-                                type: integer
-                            type: object
-                          path:
-                            default: /etc/trino
-                            type: string
-                          queryMaxMemory:
-                            default: 4GB
-                            type: string
+                          port:
+                            default: 8443
+                            type: integer
                         type: object
-                      exchangeManager:
-                        properties:
-                          baseDir:
-                            default: /tmp/trino-local-file-system-exchange-manager
-                            type: string
-                          name:
-                            default: filesystem
-                            type: string
-                        type: object
-                      logLevel:
-                        default: INFO
+                      path:
+                        default: /etc/trino
                         type: string
-                      node:
-                        properties:
-                          dataDir:
-                            default: /data/trino
-                            type: string
-                          environment:
-                            default: production
-                            type: string
-                          pluginDir:
-                            default: /usr/lib/trino/plugin
-                            type: string
-                        type: object
-                      worker:
-                        default: 2
-                        format: int32
-                        type: integer
-                    required:
-                    - config
-                    - exchangeManager
+                      queryMaxMemory:
+                        default: 4GB
+                        type: string
                     type: object
+                  exchangeManager:
+                    properties:
+                      baseDir:
+                        default: /tmp/trino-local-file-system-exchange-manager
+                        type: string
+                      name:
+                        default: filesystem
+                        type: string
+                    type: object
+                  logLevel:
+                    default: INFO
+                    type: string
+                  node:
+                    properties:
+                      dataDir:
+                        default: /data/trino
+                        type: string
+                      environment:
+                        default: production
+                        type: string
+                      pluginDir:
+                        default: /usr/lib/trino/plugin
+                        type: string
+                    type: object
+                  worker:
+                    default: 2
+                    format: int32
+                    type: integer
+                required:
+                - config
+                - exchangeManager
                 type: object
               coordinator:
                 properties:

@@ -23,19 +23,18 @@ spec:
       nginx.ingress.kubernetes.io/rewrite-target: /
     host: trino.example.com
   clusterConfig:
-    server:
-      node:
-        environment: "production"
-        dataDir: /data/trino
-        pluginDir: /usr/lib/trino/plugin
-      config:
-        queryMaxMemory: "4GB"
-        path: /etc/trino
-        https:
-          enabled: false
-      exchangeManager:
-        name: "filesystem"
-      worker: 1
+    node:
+      environment: "production"
+      dataDir: /data/trino
+      pluginDir: /usr/lib/trino/plugin
+    config:
+      queryMaxMemory: "4GB"
+      path: /etc/trino
+      https:
+        enabled: false
+    exchangeManager:
+      name: "filesystem"
+    worker: 1
   coordinator:
     roleConfig:
       jvm:
