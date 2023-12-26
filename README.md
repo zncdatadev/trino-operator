@@ -2,7 +2,8 @@
 
 [![Build Status](https://travis-ci.org/zncdata/trino-operator.svg?branch=main)](https://travis-ci.org/zncdata/trino-operator)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![codecov](https://codecov.io/gh/zncdata/trino-operator/branch/main/graph/badge.svg)](https://codecov.io/gh/zncdata/trino-operator)
+
+[//]: # ([![codecov]&#40;https://codecov.io/gh/zncdata/trino-operator/branch/main/graph/badge.svg&#41;]&#40;https://codecov.io/gh/zncdata/trino-operator&#41;)
 
 This is a Kubernetes operator to manage [Trino](https://trino.io/) ensembles.
 
