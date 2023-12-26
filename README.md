@@ -1,14 +1,14 @@
-<p align="center">
-  <img width="150" src="https://trino.io/favicon.ico" alt="Stackable Logo"/>
-</p>
+# Zncdata Stack Operator for Trino
 
-<h1 align="center">Zncdata Stack Operator for Trino</h1>
+[![Build Status](https://travis-ci.org/zncdata/trino-operator.svg?branch=main)](https://travis-ci.org/zncdata/trino-operator)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![codecov](https://codecov.io/gh/zncdata/trino-operator/branch/main/graph/badge.svg)](https://codecov.io/gh/zncdata/trino-operator)
 
 This is a Kubernetes operator to manage [Trino](https://trino.io/) ensembles.
 
 It is part of the Stack ZncData Platform, a curated selection of the best open source data apps like Apache Hive, Apache Druid, Trino or Apache Spark, working together seamlessly. Based on Kubernetes, it runs everywhere.
 
-## Installation
+## Quick Start
 
 1. Install Operator Lifecycle Manager (OLM), a tool to help manage the Operators running on your cluster.
 
