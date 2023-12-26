@@ -6,7 +6,6 @@ metadata:
     capabilities: Basic Install
     categories: Compute
     datasuit: Develop, Analysis, Governance
-    dependencies: hive-metastore-operator
     icon: https://trino.io/favicon.ico
   name: trino-operator.v0.0.0
   namespace: placeholder
@@ -14,10 +13,10 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: Trino is the Schema for the trinoes API
-      displayName: Trino
+    - description: TrinoCluster is the Schema for the trinoes API
+      displayName: Trino Cluster
       kind: TrinoCluster
-      name: trinos.stack.zncdata.net
+      name: trinoclusters.stack.zncdata.net
       version: v1alpha1
   description: trino for k8s operator
   displayName: trino-operator
