@@ -472,14 +472,14 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Node.Environment + "\n" +
-		"node.data-dir=" + instance.Spec.ClusterConfig.Node.DataDir + "\n" +
-		"plugin.dir=" + instance.Spec.ClusterConfig.Node.PluginDir + "\n"
+	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.NodeProperties.Environment + "\n" +
+		"node.data-dir=" + instance.Spec.ClusterConfig.NodeProperties.DataDir + "\n" +
+		"plugin.dir=" + instance.Spec.ClusterConfig.NodeProperties.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
-		"-Xmx" + instance.Spec.Coordinator.RoleConfig.Jvm.MaxHeapSize + "\n" +
-		"-XX:+" + instance.Spec.Coordinator.RoleConfig.Jvm.GcMethodType + "\n" +
-		"-XX:G1HeapRegionSize=" + instance.Spec.Coordinator.RoleConfig.Jvm.G1HeapRegionSize + "\n" +
+		"-Xmx" + instance.Spec.Coordinator.RoleConfig.JvmProperties.MaxHeapSize + "\n" +
+		"-XX:+" + instance.Spec.Coordinator.RoleConfig.JvmProperties.GcMethodType + "\n" +
+		"-XX:G1HeapRegionSize=" + instance.Spec.Coordinator.RoleConfig.JvmProperties.G1HeapRegionSize + "\n" +
 		"-XX:+UseGCOverheadLimit\n" +
 		"-XX:+ExplicitGCInvokesConcurrent\n" +
 		"-XX:+HeapDumpOnOutOfMemoryError\n" +
@@ -496,7 +496,7 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 	configProps := "coordinator=true\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
 		"query.max-memory=" + instance.Spec.ClusterConfig.Config.QueryMaxMemory + "\n" +
-		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.Config.QueryMaxMemoryPerNode + "\n" +
+		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://localhost:" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
 	if instance.Spec.ClusterConfig.Worker > 0 {
@@ -505,8 +505,8 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 		configProps += "node-scheduler.include-coordinator=true" + "\n"
 	}
 
-	if instance.Spec.Coordinator.RoleConfig.Config.MemoryHeapHeadroomPerNode != "" {
-		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.RoleConfig.Config.MemoryHeapHeadroomPerNode + "\n"
+	if instance.Spec.Coordinator.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode != "" {
+		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode + "\n"
 	}
 
 	if instance.Spec.ClusterConfig.Config.AuthenticationType != "" {
@@ -546,14 +546,14 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.Node.Environment + "\n" +
-		"node.data-dir=" + instance.Spec.ClusterConfig.Node.DataDir + "\n" +
-		"plugin.dir=" + instance.Spec.ClusterConfig.Node.PluginDir + "\n"
+	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.NodeProperties.Environment + "\n" +
+		"node.data-dir=" + instance.Spec.ClusterConfig.NodeProperties.DataDir + "\n" +
+		"plugin.dir=" + instance.Spec.ClusterConfig.NodeProperties.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
-		"-Xmx" + instance.Spec.Worker.RoleConfig.Jvm.MaxHeapSize + "\n" +
-		"-XX:+" + instance.Spec.Worker.RoleConfig.Jvm.GcMethodType + "\n" +
-		"-XX:G1HeapRegionSize=" + instance.Spec.Worker.RoleConfig.Jvm.G1HeapRegionSize + "\n" +
+		"-Xmx" + instance.Spec.Worker.RoleConfig.JvmProperties.MaxHeapSize + "\n" +
+		"-XX:+" + instance.Spec.Worker.RoleConfig.JvmProperties.GcMethodType + "\n" +
+		"-XX:G1HeapRegionSize=" + instance.Spec.Worker.RoleConfig.JvmProperties.G1HeapRegionSize + "\n" +
 		"-XX:+UseGCOverheadLimit\n" +
 		"-XX:+ExplicitGCInvokesConcurrent\n" +
 		"-XX:+HeapDumpOnOutOfMemoryError\n" +
@@ -569,12 +569,12 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 
 	configProps := "coordinator=false\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
-		"query.max-memory=" + instance.Spec.ClusterConfig.Config.QueryMaxMemory + "\n" +
-		"query.max-memory-per-node=" + instance.Spec.Worker.RoleConfig.Config.QueryMaxMemoryPerNode + "\n" +
+		"query.max-memory=" + instance.Spec.ClusterConfig.ConfigProperties.QueryMaxMemory + "\n" +
+		"query.max-memory-per-node=" + instance.Spec.Worker.RoleConfig.ConfigProperties.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://" + instance.Name + ":" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
-	if instance.Spec.Worker.RoleConfig.Config.MemoryHeapHeadroomPerNode != "" {
-		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.RoleConfig.Config.MemoryHeapHeadroomPerNode + "\n"
+	if instance.Spec.Worker.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode != "" {
+		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode + "\n"
 	}
 
 	if instance.Spec.ClusterConfig.Config.AuthenticationType != "" {

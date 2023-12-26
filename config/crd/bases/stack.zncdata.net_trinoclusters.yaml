@@ -44,7 +44,7 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                  config:
+                  configProperties:
                     properties:
                       authenticationType:
                         default: ""
@@ -80,7 +80,7 @@ spec:
                   logLevel:
                     default: INFO
                     type: string
-                  node:
+                  nodeProperties:
                     properties:
                       dataDir:
                         default: /data/trino
@@ -97,14 +97,14 @@ spec:
                     format: int32
                     type: integer
                 required:
-                - config
+                - configProperties
                 - exchangeManager
                 type: object
               coordinator:
                 properties:
                   roleConfig:
                     properties:
-                      config:
+                      configProperties:
                         properties:
                           memoryHeapHeadroomPerNode:
                             default: ""
@@ -113,7 +113,7 @@ spec:
                             default: 1GB
                             type: string
                         type: object
-                      jvm:
+                      jvmProperties:
                         properties:
                           gcHeapRegionSize:
                             default: 32M
@@ -1731,7 +1731,7 @@ spec:
                 properties:
                   roleConfig:
                     properties:
-                      config:
+                      configProperties:
                         properties:
                           memoryHeapHeadroomPerNode:
                             default: ""
@@ -1740,7 +1740,7 @@ spec:
                             default: 1GB
                             type: string
                         type: object
-                      jvm:
+                      jvmProperties:
                         properties:
                           gcHeapRegionSize:
                             default: 32M

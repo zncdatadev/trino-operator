@@ -23,11 +23,11 @@ spec:
       nginx.ingress.kubernetes.io/rewrite-target: /
     host: trino.example.com
   clusterConfig:
-    node:
+    nodeProperties:
       environment: "production"
       dataDir: /data/trino
       pluginDir: /usr/lib/trino/plugin
-    config:
+    configProperties:
       queryMaxMemory: "4GB"
       path: /etc/trino
       https:
@@ -37,11 +37,11 @@ spec:
     worker: 1
   coordinator:
     roleConfig:
-      jvm:
+      jvmProperties:
         maxHeapSize: "4G"
         gcMethodType: "UseG1GC"
         gcHeapRegionSize: "32M"
-      config:
+      configProperties:
         memoryHeapHeadroomPerNode: ""
         queryMaxMemoryPerNode: "1GB"
     selectors:
@@ -70,11 +70,11 @@ spec:
               memory: 500Mi
   worker:
     roleConfig:
-      jvm:
+      jvmProperties:
           maxHeapSize: "8G"
           gcMethodType: "UseG1GC"
           gcHeapRegionSize: "32M"
-      config:
+      configProperties:
           memoryHeapHeadroomPerNode: ""
           queryMaxMemoryPerNode: "1GB"
     roleGroups:

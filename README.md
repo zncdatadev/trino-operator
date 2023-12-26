@@ -1,103 +1,79 @@
-# trino-operator
+<p align="center">
+  <img width="150" src="https://trino.io/favicon.ico" alt="Stackable Logo"/>
+</p>
 
-// TODO(user): Add simple overview of use/purpose
+<h1 align="center">Zncdata Stack Operator for Trino</h1>
 
-## Description
+This is a Kubernetes operator to manage [Trino](https://trino.io/) ensembles.
 
-// TODO(user): An in-depth paragraph about your project and overview of use
+It is part of the Stack ZncData Platform, a curated selection of the best open source data apps like Apache Hive, Apache Druid, Trino or Apache Spark, working together seamlessly. Based on Kubernetes, it runs everywhere.
 
-## Getting Started
+## Installation
 
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+1. Install Operator Lifecycle Manager (OLM), a tool to help manage the Operators running on your cluster.
 
-### Running on the cluster
+    ```bash
+    curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.26.0/install.sh | bash -s v0.26.0
+    ```
 
-    1. Install Instances of Custom Resources:
+2. First we need to prepare an OperatorGroup
+
+    ```bash
+    apiVersion: operators.coreos.com/v1
+    kind: OperatorGroup
+    metadata:
+      name: operatorgroup
+    spec:
+      targetNamespaces:
+      - tmp
+      upgradeStrategy: Default
+    ```
+
+3. Start deploying our catalog
+
+    ```bash
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: CatalogSource
+    metadata:
+      name: catalog-v0-0-1-alpha
+      namespace: tmp
+    spec:
+      displayName: zncdata operators
+      grpcPodConfig:
+        securityContextConfig: restricted
+      image: quay.io/zncdata/catalog:v0.0.1-alpha
+      publisher: zncdata.net
+      sourceType: grpc
+      updateStrategy:
+        registryPoll:
+          interval: 60m
+    ```
+
+4. After completing the OperatorGroup and Catalog, you can start installing the service Subscription
+
+    ```bash
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: trino-operator-v0-0-1-alpha-sub
+      namespace: tmp
+    spec:
+      channel: fast-v0.0
+      name: trino-operator
+      source: catalog
+      sourceNamespace: tmp
+      installPlanApproval: Automatic
+      startingCSV: trino-operator.v0.0.1-alpha
+    ```
+
+5. After install, watch your operator come up using next command.
+
+    ```bash
+    kubectl get csv -n tmp
+    ```
+
+6. Install Instances of Custom Resources:
 
     ```sh
     kubectl apply -f config/samples/
     ```
-
-    2. Build and push your image to the location specified by `IMG`:
-
-    ```sh
-    make docker-build docker-push IMG=<some-registry>/trino-operator:tag
-    ```
-
-    3. Deploy the controller to the cluster with the image specified by `IMG`:
-
-    ```sh
-    make deploy IMG=<some-registry>/trino-operator:tag
-    ```
-
-### Uninstall CRDs
-
-To delete the CRDs from the cluster:
-
-```sh
-make uninstall
-```
-
-### Undeploy controller
-
-UnDeploy the controller from the cluster:
-
-```sh
-make undeploy
-```
-
-## Contributing
-
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-### How it works
-
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/),
-which provide a reconcile function responsible for synchronizing resources until the desired state is reached on the cluster.
-
-### Test It Out
-
-    1. Install the CRDs into the cluster:
-
-    ```sh
-    make install
-    ```
-
-    2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-    ```sh
-    make run
-    ```
-
-**NOTE:** You can also run this in one step by running: `make install run`
-
-### Modifying the API definitions
-
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2023 zncdata-labs.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.

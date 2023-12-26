@@ -62,10 +62,10 @@ type ClusterConfigSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=2
-	Worker          int32                `json:"worker"`
-	Node            *NodeSpec            `json:"node,omitempty"`
-	Config          *ConfigServerSpec    `json:"config"`
-	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager"`
+	Worker           int32                       `json:"worker"`
+	NodeProperties   *NodePropertiesSpec         `json:"nodeProperties,omitempty"`
+	ConfigProperties *ConfigPropertiesServerSpec `json:"configProperties"`
+	ExchangeManager  *ExchangeManagerSpec        `json:"exchangeManager"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=INFO
 	LogLevel string `json:"logLevel"`
@@ -123,7 +123,7 @@ type ExchangeManagerSpec struct {
 	BaseDir string `json:"baseDir"`
 }
 
-type NodeSpec struct {
+type NodePropertiesSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="production"
 	Environment string `json:"environment"`
@@ -135,7 +135,7 @@ type NodeSpec struct {
 	PluginDir string `json:"pluginDir"`
 }
 
-type ConfigServerSpec struct {
+type ConfigPropertiesServerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="/etc/trino"
 	Path string `json:"path"`
@@ -182,13 +182,13 @@ type SelectorSpec struct {
 
 type RoleConfigCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	Jvm *JvmRCCoordinatorSpec `json:"jvm,omitempty"`
+	JvmProperties *JvmPropertiesRCCoordinatorSpec `json:"jvmProperties,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigRCCoordinatorSpec `json:"config"`
+	ConfigProperties *ConfigPropertiesRCCoordinatorSpec `json:"configProperties"`
 }
 
-type JvmRCCoordinatorSpec struct {
+type JvmPropertiesRCCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="8G"
 	MaxHeapSize string `json:"maxHeapSize"`
@@ -200,7 +200,7 @@ type JvmRCCoordinatorSpec struct {
 	G1HeapRegionSize string `json:"gcHeapRegionSize"`
 }
 
-type ConfigRCCoordinatorSpec struct {
+type ConfigPropertiesRCCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
 	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
@@ -242,10 +242,10 @@ type WorkerSpec struct {
 
 type RoleConfigWorkerSpec struct {
 	// +kubebuilder:validation:Optional
-	Jvm *JvmRCWorkerSpec `json:"jvm,omitempty"`
+	JvmProperties *JvmRCWorkerSpec `json:"jvmProperties,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigRCWrokerSpec `json:"config"`
+	ConfigProperties *ConfigPropertiesRCWrokerSpec `json:"configProperties"`
 }
 
 type RoleGroupsWorkerSpec struct {
@@ -280,7 +280,7 @@ type JvmRCWorkerSpec struct {
 	G1HeapRegionSize string `json:"gcHeapRegionSize"`
 }
 
-type ConfigRCWrokerSpec struct {
+type ConfigPropertiesRCWrokerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
 	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
