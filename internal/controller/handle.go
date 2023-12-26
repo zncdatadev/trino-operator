@@ -495,7 +495,7 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 
 	configProps := "coordinator=true\n" +
 		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
-		"query.max-memory=" + instance.Spec.ClusterConfig.Config.QueryMaxMemory + "\n" +
+		"query.max-memory=" + instance.Spec.ClusterConfig.ConfigProperties.QueryMaxMemory + "\n" +
 		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://localhost:" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
@@ -509,8 +509,8 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode + "\n"
 	}
 
-	if instance.Spec.ClusterConfig.Config.AuthenticationType != "" {
-		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Config.AuthenticationType + "\n"
+	if instance.Spec.ClusterConfig.ConfigProperties.AuthenticationType != "" {
+		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.ConfigProperties.AuthenticationType + "\n"
 	}
 
 	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.ExchangeManager.Name + "\n"
@@ -577,8 +577,8 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode + "\n"
 	}
 
-	if instance.Spec.ClusterConfig.Config.AuthenticationType != "" {
-		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.Config.AuthenticationType + "\n"
+	if instance.Spec.ClusterConfig.ConfigProperties.AuthenticationType != "" {
+		configProps += "http-server.authentication.type=" + instance.Spec.ClusterConfig.ConfigProperties.AuthenticationType + "\n"
 	}
 
 	exchangeManagerProps := "exchange-manager.name=" + instance.Spec.ClusterConfig.ExchangeManager.Name + "\n"
