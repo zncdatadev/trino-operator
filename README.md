@@ -6,7 +6,9 @@
 
 This is a Kubernetes operator to manage [Trino](https://trino.io/) ensembles.
 
-It is part of the Stack ZncData Platform, a curated selection of the best open source data apps like Apache Hive, Apache Druid, Trino or Apache Spark, working together seamlessly. Based on Kubernetes, it runs everywhere.
+It is part of the Stack ZncData Platform,
+a curated selection of the best open source data apps like Apache Hive, Apache Druid, Trino or Apache Spark,
+working together seamlessly. Based on Kubernetes, it runs everywhere.
 
 ## Quick Start
 
