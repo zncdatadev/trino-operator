@@ -34,7 +34,7 @@ spec:
         enabled: false
     exchangeManager:
       name: "filesystem"
-    worker: 1
+    clusterMode: false
   coordinator:
     roleConfig:
       jvmProperties:

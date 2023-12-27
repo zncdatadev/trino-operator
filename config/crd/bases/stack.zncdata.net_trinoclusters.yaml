@@ -44,6 +44,9 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  clusterMode:
+                    default: true
+                    type: boolean
                   configProperties:
                     properties:
                       authenticationType:
@@ -98,11 +101,8 @@ spec:
                         default: /usr/lib/trino/plugin
                         type: string
                     type: object
-                  worker:
-                    default: 2
-                    format: int32
-                    type: integer
                 required:
+                - clusterMode
                 - configProperties
                 - exchangeManager
                 type: object

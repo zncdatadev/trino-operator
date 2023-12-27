@@ -460,9 +460,11 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 			continue
 		}
 
-		if err := CreateOrUpdate(ctx, r.Client, dep); err != nil {
-			r.Log.Error(err, "Failed to create or update worker Deployment", "deployment", dep.Name)
-			return err
+		if instance.Spec.ClusterConfig.ClusterMode {
+			if err := CreateOrUpdate(ctx, r.Client, dep); err != nil {
+				r.Log.Error(err, "Failed to create or update worker Deployment", "deployment", dep.Name)
+				return err
+			}
 		}
 	}
 
@@ -499,7 +501,7 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.QueryMaxMemoryPerNode + "\n" +
 		"discovery.uri=http://localhost:" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
 
-	if instance.Spec.ClusterConfig.Worker > 0 {
+	if instance.Spec.ClusterConfig.ClusterMode {
 		configProps += "node-scheduler.include-coordinator=false" + "\n"
 	} else {
 		configProps += "node-scheduler.include-coordinator=true" + "\n"

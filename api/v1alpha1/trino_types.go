@@ -60,9 +60,9 @@ type ClusterConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	Catalogs map[string]string `json:"catalogs"`
 
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=2
-	Worker           int32                 `json:"worker"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default:=true
+	ClusterMode      bool                  `json:"clusterMode"`
 	NodeProperties   *NodePropertiesSpec   `json:"nodeProperties,omitempty"`
 	ConfigProperties *ConfigPropertiesSpec `json:"configProperties"`
 	ExchangeManager  *ExchangeManagerSpec  `json:"exchangeManager"`
