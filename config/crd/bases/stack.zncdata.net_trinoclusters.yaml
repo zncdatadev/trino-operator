@@ -61,11 +61,17 @@ spec:
                             default: 8443
                             type: integer
                         type: object
+                      memoryHeapHeadroomPerNode:
+                        default: ""
+                        type: string
                       path:
                         default: /etc/trino
                         type: string
                       queryMaxMemory:
                         default: 4GB
+                        type: string
+                      queryMaxMemoryPerNode:
+                        default: 1GB
                         type: string
                     type: object
                   exchangeManager:
@@ -106,8 +112,29 @@ spec:
                     properties:
                       configProperties:
                         properties:
+                          authenticationType:
+                            default: ""
+                            type: string
+                          https:
+                            properties:
+                              enabled:
+                                default: false
+                                type: boolean
+                              keystorePath:
+                                default: ""
+                                type: string
+                              port:
+                                default: 8443
+                                type: integer
+                            type: object
                           memoryHeapHeadroomPerNode:
                             default: ""
+                            type: string
+                          path:
+                            default: /etc/trino
+                            type: string
+                          queryMaxMemory:
+                            default: 4GB
                             type: string
                           queryMaxMemoryPerNode:
                             default: 1GB
@@ -1733,8 +1760,29 @@ spec:
                     properties:
                       configProperties:
                         properties:
+                          authenticationType:
+                            default: ""
+                            type: string
+                          https:
+                            properties:
+                              enabled:
+                                default: false
+                                type: boolean
+                              keystorePath:
+                                default: ""
+                                type: string
+                              port:
+                                default: 8443
+                                type: integer
+                            type: object
                           memoryHeapHeadroomPerNode:
                             default: ""
+                            type: string
+                          path:
+                            default: /etc/trino
+                            type: string
+                          queryMaxMemory:
+                            default: 4GB
                             type: string
                           queryMaxMemoryPerNode:
                             default: 1GB

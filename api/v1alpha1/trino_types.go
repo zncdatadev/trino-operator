@@ -62,10 +62,10 @@ type ClusterConfigSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=2
-	Worker           int32                       `json:"worker"`
-	NodeProperties   *NodePropertiesSpec         `json:"nodeProperties,omitempty"`
-	ConfigProperties *ConfigPropertiesServerSpec `json:"configProperties"`
-	ExchangeManager  *ExchangeManagerSpec        `json:"exchangeManager"`
+	Worker           int32                 `json:"worker"`
+	NodeProperties   *NodePropertiesSpec   `json:"nodeProperties,omitempty"`
+	ConfigProperties *ConfigPropertiesSpec `json:"configProperties"`
+	ExchangeManager  *ExchangeManagerSpec  `json:"exchangeManager"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=INFO
 	LogLevel string `json:"logLevel"`
@@ -135,7 +135,7 @@ type NodePropertiesSpec struct {
 	PluginDir string `json:"pluginDir"`
 }
 
-type ConfigPropertiesServerSpec struct {
+type ConfigPropertiesSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="/etc/trino"
 	Path string `json:"path"`
@@ -147,6 +147,12 @@ type ConfigPropertiesServerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=""
 	AuthenticationType string `json:"authenticationType"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="1GB"
+	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
 }
 
 type HttpsSpec struct {
@@ -182,13 +188,13 @@ type SelectorSpec struct {
 
 type RoleConfigCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	JvmProperties *JvmPropertiesRCCoordinatorSpec `json:"jvmProperties,omitempty"`
+	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	ConfigProperties *ConfigPropertiesRCCoordinatorSpec `json:"configProperties"`
+	ConfigProperties *ConfigPropertiesSpec `json:"configProperties"`
 }
 
-type JvmPropertiesRCCoordinatorSpec struct {
+type JvmPropertiesRoleConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="8G"
 	MaxHeapSize string `json:"maxHeapSize"`
@@ -198,15 +204,6 @@ type JvmPropertiesRCCoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="32M"
 	G1HeapRegionSize string `json:"gcHeapRegionSize"`
-}
-
-type ConfigPropertiesRCCoordinatorSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="1GB"
-	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
 }
 
 type RoleGroupCoordinatorSpec struct {
@@ -242,10 +239,10 @@ type WorkerSpec struct {
 
 type RoleConfigWorkerSpec struct {
 	// +kubebuilder:validation:Optional
-	JvmProperties *JvmRCWorkerSpec `json:"jvmProperties,omitempty"`
+	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	ConfigProperties *ConfigPropertiesRCWrokerSpec `json:"configProperties"`
+	ConfigProperties *ConfigPropertiesSpec `json:"configProperties"`
 }
 
 type RoleGroupsWorkerSpec struct {
@@ -266,27 +263,6 @@ type ConfigRGWorkerSpec struct {
 
 	// +kubebuilder:validation:Required
 	Resources *corev1.ResourceRequirements `json:"resources"`
-}
-
-type JvmRCWorkerSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="8G"
-	MaxHeapSize string `json:"maxHeapSize"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="UseG1GC"
-	GcMethodType string `json:"gcMethodType"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="32M"
-	G1HeapRegionSize string `json:"gcHeapRegionSize"`
-}
-
-type ConfigPropertiesRCWrokerSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="1GB"
-	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode"`
 }
 
 // SetStatusCondition updates the status condition using the provided arguments.
