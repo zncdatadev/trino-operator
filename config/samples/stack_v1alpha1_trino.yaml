@@ -1,5 +1,5 @@
 apiVersion: stack.zncdata.net/v1alpha1
-kind: Trino
+kind: TrinoCluster
 metadata:
   labels:
     app.kubernetes.io/name: trino
@@ -9,7 +9,6 @@ metadata:
     app.kubernetes.io/created-by: trino-operator
   name: trino-sample
 spec:
-  replicas: 1
   image:
     repository: trinodb/trino
     tag: "423"
@@ -18,46 +17,91 @@ spec:
     port: 18080
     type: ClusterIP
   ingress:
-    enabled: true
+    enabled: false
     annotations:
       kubernetes.io/ingress.class: traefik
       nginx.ingress.kubernetes.io/rewrite-target: /
     host: trino.example.com
-  server:
-    node:
+  clusterConfig:
+    nodeProperties:
       environment: "production"
       dataDir: /data/trino
       pluginDir: /usr/lib/trino/plugin
-    config:
+    configProperties:
       queryMaxMemory: "4GB"
       path: /etc/trino
       https:
         enabled: false
     exchangeManager:
       name: "filesystem"
-    worker: 1
+    clusterMode: false
   coordinator:
-    resources:
-      requests:
-        cpu: 100m
-        memory: 512Mi
-    jvm:
-      maxHeapSize: "8G"
-      gcMethodType: "UseG1GC"
-      gcHeapRegionSize: "32M"
-    config:
-      queryMaxMemoryPerNode: "1GB"
+    roleConfig:
+      jvmProperties:
+        maxHeapSize: "4G"
+        gcMethodType: "UseG1GC"
+        gcHeapRegionSize: "32M"
+      configProperties:
+        memoryHeapHeadroomPerNode: ""
+        queryMaxMemoryPerNode: "1GB"
+    selectors:
+      default:
+        selector:
+          matchLabels:
+            component: coordinator
+      foo:
+        selector:
+          matchLabels:
+            component: coordinator-foo
+    roleGroups:
+      default:
+        replicas: 1
+        config:
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500Mi
+      foo:
+        replicas: 2
+        config:
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500Mi
   worker:
-    resources:
-      requests:
-        cpu: 100m
-        memory: 512Mi
-    jvm:
-      maxHeapSize: "8G"
-      gcMethodType: "UseG1GC"
-      gcHeapRegionSize: "32M"
-    config:
-      queryMaxMemoryPerNode: "1GB"
+    roleConfig:
+      jvmProperties:
+          maxHeapSize: "8G"
+          gcMethodType: "UseG1GC"
+          gcHeapRegionSize: "32M"
+      configProperties:
+          memoryHeapHeadroomPerNode: ""
+          queryMaxMemoryPerNode: "1GB"
+    roleGroups:
+      default:
+        replicas: 1
+        config:
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500Mi
+      foo:
+        replicas: 2
+        config:
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500Mi
+
+    selectors:
+      default:
+        selector:
+          matchLabels:
+            app: worker
+      foo:
+        selector:
+          matchLabels:
+            app: worker-foo
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
