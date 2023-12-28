@@ -212,18 +212,7 @@ type RoleGroupCoordinatorSpec struct {
 	Replicas int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigRGCoordinatorSpec `json:"config"`
-}
-
-type ConfigRGCoordinatorSpec struct {
-	// +kubebuilder:validation:Optional
-	Affinity *corev1.Affinity `json:"affinity"`
-
-	// +kubebuilder:validation:Optional
-	Tolerations *corev1.Toleration `json:"tolerations"`
-
-	// +kubebuilder:validation:Required
-	Resources *corev1.ResourceRequirements `json:"resources"`
+	Config *ConfigRoleGroupSpec `json:"config"`
 }
 
 type WorkerSpec struct {
@@ -251,10 +240,10 @@ type RoleGroupsWorkerSpec struct {
 	Replicas int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	Config *ConfigRGWorkerSpec `json:"config"`
+	Config *ConfigRoleGroupSpec `json:"config"`
 }
 
-type ConfigRGWorkerSpec struct {
+type ConfigRoleGroupSpec struct {
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
 
