@@ -396,7 +396,7 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetNameWithSuffix("coordinator"),
+										Name: instance.GetNameWithSuffix("worker"),
 									},
 								},
 							},
