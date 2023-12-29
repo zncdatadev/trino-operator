@@ -145,17 +145,9 @@ func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.Tri
 
 	if instance.Spec.Coordinator.RoleGroups != nil {
 		for roleGroupName, roleGroup := range instance.Spec.Coordinator.RoleGroups {
-			if roleGroup != nil {
-				if instance.Spec.Coordinator.Selectors != nil {
-					for _, selectors := range instance.Spec.Coordinator.Selectors {
-						if selectors != nil {
-							dep := r.makeCoordinatorDeploymentForRoleGroup(instance, roleGroupName, roleGroup, selectors, r.Scheme)
-							if dep != nil {
-								deployments = append(deployments, dep)
-							}
-						}
-					}
-				}
+			dep := r.makeCoordinatorDeploymentForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if dep != nil {
+				deployments = append(deployments, dep)
 			}
 		}
 	}
@@ -163,18 +155,14 @@ func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.Tri
 	return deployments
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, selectors *stackv1alpha1.SelectorSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
 
-	if instance.Spec.Coordinator.Selectors != nil {
-		for _, selectorSpec := range instance.Spec.Coordinator.Selectors {
-			if selectorSpec != nil && selectorSpec.Selector.MatchLabels != nil {
-				for k, v := range selectorSpec.Selector.MatchLabels {
-					additionalLabels[k] = v
-				}
-			}
+	if roleGroup != nil && roleGroup.Config.MatchLabels != nil {
+		for k, v := range roleGroup.Config.MatchLabels {
+			additionalLabels[k] = v
 		}
 	}
 
@@ -268,11 +256,8 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 			},
 		},
 	}
-	if &selectors.NodeSelector != nil {
-		dep.Spec.Template.Spec.NodeSelector = selectors.NodeSelector
-	}
 
-	CoordinatorScheduler(instance, dep, roleGroup)
+	CoordinatorScheduler(dep, roleGroup)
 
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
@@ -303,17 +288,9 @@ func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoClu
 
 	if instance.Spec.Worker.RoleGroups != nil {
 		for roleGroupName, roleGroup := range instance.Spec.Worker.RoleGroups {
-			if roleGroup != nil {
-				if instance.Spec.Worker.Selectors != nil {
-					for _, selectors := range instance.Spec.Worker.Selectors {
-						if selectors != nil {
-							dep := r.makeWorkerDeploymentForRoleGroup(instance, roleGroupName, roleGroup, selectors, r.Scheme)
-							if dep != nil {
-								deployments = append(deployments, dep)
-							}
-						}
-					}
-				}
+			dep := r.makeWorkerDeploymentForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if dep != nil {
+				deployments = append(deployments, dep)
 			}
 		}
 	}
@@ -321,18 +298,14 @@ func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoClu
 	return deployments
 }
 
-func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, selectors *stackv1alpha1.SelectorSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
 
-	if instance.Spec.Worker.Selectors != nil {
-		for _, selectorSpec := range instance.Spec.Worker.Selectors {
-			if selectorSpec != nil && selectorSpec.Selector.MatchLabels != nil {
-				for k, v := range selectorSpec.Selector.MatchLabels {
-					additionalLabels[k] = v
-				}
-			}
+	if roleGroup != nil && roleGroup.Config.MatchLabels != nil {
+		for k, v := range roleGroup.Config.MatchLabels {
+			additionalLabels[k] = v
 		}
 	}
 
@@ -427,11 +400,7 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 		},
 	}
 
-	if selectors.NodeSelector != nil {
-		dep.Spec.Template.Spec.NodeSelector = selectors.NodeSelector
-	}
-
-	WorkerScheduler(instance, dep, roleGroup)
+	WorkerScheduler(dep, roleGroup)
 
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {

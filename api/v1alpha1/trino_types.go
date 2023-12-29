@@ -169,21 +169,10 @@ type HttpsSpec struct {
 
 type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	Selectors map[string]*SelectorSpec `json:"selectors"`
-
-	// +kubebuilder:validation:Optional
 	RoleConfig *RoleConfigCoordinatorSpec `json:"roleConfig"`
 
 	// +kubebuilder:validation:Optional
 	RoleGroups map[string]*RoleGroupCoordinatorSpec `json:"roleGroups"`
-}
-
-type SelectorSpec struct {
-	// +kubebuilder:validation:Optional
-	Selector metav1.LabelSelector `json:"selector"`
-
-	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector"`
 }
 
 type RoleConfigCoordinatorSpec struct {
@@ -217,9 +206,6 @@ type RoleGroupCoordinatorSpec struct {
 
 type WorkerSpec struct {
 	// +kubebuilder:validation:Optional
-	Selectors map[string]*SelectorSpec `json:"selectors"`
-
-	// +kubebuilder:validation:Optional
 	RoleConfig *RoleConfigWorkerSpec `json:"roleConfig"`
 
 	// +kubebuilder:validation:Optional
@@ -245,7 +231,13 @@ type RoleGroupsWorkerSpec struct {
 
 type ConfigRoleGroupSpec struct {
 	// +kubebuilder:validation:Optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector"`
 
 	// +kubebuilder:validation:Optional
 	Tolerations *corev1.Toleration `json:"tolerations"`

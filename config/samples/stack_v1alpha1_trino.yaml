@@ -44,15 +44,6 @@ spec:
       configProperties:
         memoryHeapHeadroomPerNode: ""
         queryMaxMemoryPerNode: "1GB"
-    selectors:
-      default:
-        selector:
-          matchLabels:
-            component: coordinator
-      foo:
-        selector:
-          matchLabels:
-            component: coordinator-foo
     roleGroups:
       default:
         replicas: 1
@@ -61,6 +52,8 @@ spec:
             requests:
               cpu: 200m
               memory: 500Mi
+          matchLabels:
+            app: default-coordinator
       foo:
         replicas: 2
         config:
@@ -68,6 +61,8 @@ spec:
             requests:
               cpu: 200m
               memory: 500Mi
+          matchLabels:
+            app: foo-coordinator
   worker:
     roleConfig:
       jvmProperties:
@@ -85,6 +80,8 @@ spec:
             requests:
               cpu: 200m
               memory: 500Mi
+          matchLabels:
+            app: default-worker
       foo:
         replicas: 2
         config:
@@ -92,16 +89,8 @@ spec:
             requests:
               cpu: 200m
               memory: 500Mi
-
-    selectors:
-      default:
-        selector:
           matchLabels:
-            app: worker
-      foo:
-        selector:
-          matchLabels:
-            app: worker-foo
+            app: foo-worker
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
