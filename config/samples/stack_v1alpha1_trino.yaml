@@ -55,7 +55,7 @@ spec:
           matchLabels:
             app: default-coordinator
       foo:
-        replicas: 2
+        replicas: 1
         config:
           resources:
             requests:
@@ -83,7 +83,7 @@ spec:
           matchLabels:
             app: default-worker
       foo:
-        replicas: 2
+        replicas: 1
         config:
           resources:
             requests:

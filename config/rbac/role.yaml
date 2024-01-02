@@ -86,7 +86,7 @@ rules:
 - apiGroups:
   - stack.zncdata.net
   resources:
-  - hivemetastores
+  - trinoclusters
   verbs:
   - create
   - delete
@@ -98,25 +98,13 @@ rules:
 - apiGroups:
   - stack.zncdata.net
   resources:
-  - trinoes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - stack.zncdata.net
-  resources:
-  - trinoes/finalizers
+  - trinoclusters/finalizers
   verbs:
   - update
 - apiGroups:
   - stack.zncdata.net
   resources:
-  - trinoes/status
+  - trinoclusters/status
   verbs:
   - get
   - patch
