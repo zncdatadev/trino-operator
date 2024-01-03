@@ -3686,7 +3686,7 @@ spec:
             - worker
             type: object
           status:
-            description: Status defines the common state of Zncdata
+            description: Status defines the common status
             properties:
               conditions:
                 items:
