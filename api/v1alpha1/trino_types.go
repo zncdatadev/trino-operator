@@ -169,24 +169,13 @@ type HttpsSpec struct {
 
 type CoordinatorSpec struct {
 	// +kubebuilder:validation:Optional
-	Selectors map[string]*SelectorSpec `json:"selectors"`
-
-	// +kubebuilder:validation:Optional
-	RoleConfig *RoleConfigCoordinatorSpec `json:"roleConfig"`
+	RoleConfig *RoleConfigSpec `json:"roleConfig"`
 
 	// +kubebuilder:validation:Optional
 	RoleGroups map[string]*RoleGroupCoordinatorSpec `json:"roleGroups"`
 }
 
-type SelectorSpec struct {
-	// +kubebuilder:validation:Optional
-	Selector metav1.LabelSelector `json:"selector"`
-
-	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector"`
-}
-
-type RoleConfigCoordinatorSpec struct {
+type RoleConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
 
@@ -217,21 +206,10 @@ type RoleGroupCoordinatorSpec struct {
 
 type WorkerSpec struct {
 	// +kubebuilder:validation:Optional
-	Selectors map[string]*SelectorSpec `json:"selectors"`
-
-	// +kubebuilder:validation:Optional
-	RoleConfig *RoleConfigWorkerSpec `json:"roleConfig"`
+	RoleConfig *RoleConfigSpec `json:"roleConfig"`
 
 	// +kubebuilder:validation:Optional
 	RoleGroups map[string]*RoleGroupsWorkerSpec `json:"roleGroups"`
-}
-
-type RoleConfigWorkerSpec struct {
-	// +kubebuilder:validation:Optional
-	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ConfigProperties *ConfigPropertiesSpec `json:"configProperties"`
 }
 
 type RoleGroupsWorkerSpec struct {
@@ -245,13 +223,37 @@ type RoleGroupsWorkerSpec struct {
 
 type ConfigRoleGroupSpec struct {
 	// +kubebuilder:validation:Optional
+	Image *ImageSpec `json:"image"`
+
+	// +kubebuilder:validation:Optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
+
+	// +kubebuilder:validation:Optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector"`
 
 	// +kubebuilder:validation:Optional
 	Tolerations *corev1.Toleration `json:"tolerations"`
 
 	// +kubebuilder:validation:Required
 	Resources *corev1.ResourceRequirements `json:"resources"`
+
+	// +kubebuilder:validation:Optional
+	Service *ServiceSpec `json:"service"`
+
+	// +kubebuilder:validation:Optional
+	Ingress *IngressSpec `json:"ingress"`
+
+	// +kubebuilder:validation:Optional
+	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	ConfigProperties *ConfigPropertiesSpec `json:"configProperties"`
 }
 
 // SetStatusCondition updates the status condition using the provided arguments.
@@ -275,8 +277,8 @@ type TrinoCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TrinoSpec      `json:"spec,omitempty"`
-	Status *status.Status `json:"status,omitempty"`
+	Spec   TrinoSpec     `json:"spec,omitempty"`
+	Status status.Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

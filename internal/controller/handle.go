@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/zncdata-labs/operator-go/pkg/errors"
 	"github.com/zncdata-labs/operator-go/pkg/status"
+	"github.com/zncdata-labs/operator-go/pkg/utils"
 	"strconv"
 	"strings"
 
@@ -17,21 +18,75 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) (*v1.Ingress, error) {
+func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster) ([]*v1.Ingress, error) {
+	var ing []*v1.Ingress
+
+	if instance.Spec.Coordinator.RoleGroups != nil {
+		for roleGroupName, roleGroup := range instance.Spec.Coordinator.RoleGroups {
+			i, err := r.makeIngressForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if err != nil {
+				return nil, err
+			}
+			ing = append(ing, i)
+		}
+	}
+	return ing, nil
+}
+
+func (r *TrinoReconciler) makeIngressForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) (*v1.Ingress, error) {
 	labels := instance.GetLabels()
+
+	additionalLabels := make(map[string]string)
+
+	if roleGroup.Config != nil && roleGroup.Config.MatchLabels != nil {
+		for k, v := range roleGroup.Config.MatchLabels {
+			additionalLabels[k] = v
+		}
+	}
+
+	mergedLabels := make(map[string]string)
+	for key, value := range labels {
+		mergedLabels[key] = value
+	}
+	for key, value := range additionalLabels {
+		mergedLabels[key] = value
+	}
 
 	pt := v1.PathTypeImplementationSpecific
 
+	var host string
+	var port int32
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Ingress != nil {
+		if !roleGroup.Config.Ingress.Enabled {
+			return nil, nil
+		}
+		host = roleGroup.Config.Ingress.Host
+		if roleGroup.Config.Service != nil {
+			port = roleGroup.Config.Service.Port
+		} else if instance.Spec.Service != nil {
+			port = instance.Spec.Service.Port
+		}
+	} else {
+		if instance.Spec.Ingress != nil && !instance.Spec.Ingress.Enabled {
+			return nil, nil
+		}
+		host = instance.Spec.Ingress.Host
+		if instance.Spec.Service != nil {
+			port = instance.Spec.Service.Port
+		}
+	}
+
 	ing := &v1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
+			Name:      instance.GetNameWithSuffix(roleGroupName),
 			Namespace: instance.Namespace,
-			Labels:    labels,
+			Labels:    mergedLabels,
 		},
 		Spec: v1.IngressSpec{
 			Rules: []v1.IngressRule{
 				{
-					Host: instance.Spec.Ingress.Host,
+					Host: host,
 					IngressRuleValue: v1.IngressRuleValue{
 						HTTP: &v1.HTTPIngressRuleValue{
 							Paths: []v1.HTTPIngressPath{
@@ -40,9 +95,9 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, sche
 									PathType: &pt,
 									Backend: v1.IngressBackend{
 										Service: &v1.IngressServiceBackend{
-											Name: instance.GetName(),
+											Name: instance.GetNameWithSuffix(roleGroupName),
 											Port: v1.ServiceBackendPort{
-												Number: instance.Spec.Service.Port,
+												Number: port,
 											},
 										},
 									},
@@ -54,6 +109,7 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, sche
 			},
 		},
 	}
+
 	err := ctrl.SetControllerReference(instance, ing, schema)
 	if err != nil {
 		r.Log.Error(err, "Failed to set controller reference for ingress")
@@ -63,14 +119,19 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster, sche
 }
 
 func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
-	obj, err := r.makeIngress(instance, r.Scheme)
+	obj, err := r.makeIngress(instance)
 	if err != nil {
 		return err
 	}
-
-	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
-		r.Log.Error(err, "Failed to create or update ingress")
-		return err
+	if r != nil && r.Client != nil {
+		for _, ingress := range obj {
+			if ingress != nil {
+				if err := CreateOrUpdate(ctx, r.Client, ingress); err != nil {
+					r.Log.Error(err, "Failed to create or update ingress")
+					return err
+				}
+			}
+		}
 	}
 
 	if instance.Spec.Ingress.Enabled {
@@ -82,41 +143,88 @@ func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv
 					URL:  url,
 				},
 			}
-			if err := r.UpdateStatus(ctx, instance); err != nil {
+			if err := utils.UpdateStatus(ctx, r.Client, instance); err != nil {
 				return err
 			}
+
 		} else if instance.Spec.Ingress.Host != instance.Status.URLs[0].Name {
 			instance.Status.URLs[0].URL = url
-			if err := r.UpdateStatus(ctx, instance); err != nil {
+			if err := utils.UpdateStatus(ctx, r.Client, instance); err != nil {
 				return err
 			}
+
 		}
 	}
+
 	return nil
 }
 
-// make service
-func (r *TrinoReconciler) makeService(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) (*corev1.Service, error) {
+func (r *TrinoReconciler) makeServices(instance *stackv1alpha1.TrinoCluster) ([]*corev1.Service, error) {
+	var services []*corev1.Service
+
+	if instance.Spec.Coordinator.RoleGroups != nil {
+		for roleGroupName, roleGroup := range instance.Spec.Coordinator.RoleGroups {
+			svc, err := r.makeServiceForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if err != nil {
+				return nil, err
+			}
+			services = append(services, svc)
+		}
+	}
+
+	return services, nil
+}
+
+func (r *TrinoReconciler) makeServiceForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) (*corev1.Service, error) {
 	labels := instance.GetLabels()
-	labels["component"] = "coordinator"
+
+	additionalLabels := make(map[string]string)
+
+	if roleGroup.Config != nil && roleGroup.Config.MatchLabels != nil {
+		for k, v := range roleGroup.Config.MatchLabels {
+			additionalLabels[k] = v
+		}
+	}
+
+	mergedLabels := make(map[string]string)
+	for key, value := range labels {
+		mergedLabels[key] = value
+	}
+	for key, value := range additionalLabels {
+		mergedLabels[key] = value
+	}
+
+	var port int32
+	var serviceType corev1.ServiceType
+	var annotations map[string]string
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Service != nil {
+		port = roleGroup.Config.Service.Port
+		serviceType = roleGroup.Config.Service.Type
+		annotations = roleGroup.Config.Service.Annotations
+	} else {
+		port = instance.Spec.Service.Port
+		serviceType = instance.Spec.Service.Type
+		annotations = instance.Spec.Service.Annotations
+	}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.Name,
+			Name:        instance.GetNameWithSuffix(roleGroupName),
 			Namespace:   instance.Namespace,
-			Labels:      labels,
-			Annotations: instance.Spec.Service.Annotations,
+			Labels:      mergedLabels,
+			Annotations: annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port:     instance.Spec.Service.Port,
+					Port:     port,
 					Name:     "http",
 					Protocol: "TCP",
 				},
 			},
-			Selector: labels,
-			Type:     instance.Spec.Service.Type,
+			Selector: mergedLabels,
+			Type:     serviceType,
 		},
 	}
 	err := ctrl.SetControllerReference(instance, svc, schema)
@@ -128,15 +236,22 @@ func (r *TrinoReconciler) makeService(instance *stackv1alpha1.TrinoCluster, sche
 }
 
 func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
-	obj, err := r.makeService(instance, r.Scheme)
+	services, err := r.makeServices(instance)
 	if err != nil {
 		return err
 	}
 
-	if err := CreateOrUpdate(ctx, r.Client, obj); err != nil {
-		r.Log.Error(err, "Failed to create or update service")
-		return err
+	for _, svc := range services {
+		if svc == nil {
+			continue
+		}
+
+		if err := CreateOrUpdate(ctx, r.Client, svc); err != nil {
+			r.Log.Error(err, "Failed to create or update service", "service", svc.Name)
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -145,17 +260,9 @@ func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.Tri
 
 	if instance.Spec.Coordinator.RoleGroups != nil {
 		for roleGroupName, roleGroup := range instance.Spec.Coordinator.RoleGroups {
-			if roleGroup != nil {
-				if instance.Spec.Coordinator.Selectors != nil {
-					for _, selectors := range instance.Spec.Coordinator.Selectors {
-						if selectors != nil {
-							dep := r.makeCoordinatorDeploymentForRoleGroup(instance, roleGroupName, roleGroup, selectors, r.Scheme)
-							if dep != nil {
-								deployments = append(deployments, dep)
-							}
-						}
-					}
-				}
+			dep := r.makeCoordinatorDeploymentForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if dep != nil {
+				deployments = append(deployments, dep)
 			}
 		}
 	}
@@ -163,18 +270,14 @@ func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.Tri
 	return deployments
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, selectors *stackv1alpha1.SelectorSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
 
-	if instance.Spec.Coordinator.Selectors != nil {
-		for _, selectorSpec := range instance.Spec.Coordinator.Selectors {
-			if selectorSpec != nil && selectorSpec.Selector.MatchLabels != nil {
-				for k, v := range selectorSpec.Selector.MatchLabels {
-					additionalLabels[k] = v
-				}
-			}
+	if roleGroup != nil && roleGroup.Config.MatchLabels != nil {
+		for k, v := range roleGroup.Config.MatchLabels {
+			additionalLabels[k] = v
 		}
 	}
 
@@ -184,6 +287,21 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 	}
 	for key, value := range additionalLabels {
 		mergedLabels[key] = value
+	}
+
+	var image stackv1alpha1.ImageSpec
+	var securityContext *corev1.PodSecurityContext
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Image != nil {
+		image = *roleGroup.Config.Image
+	} else {
+		image = *instance.Spec.Image
+	}
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.SecurityContext != nil {
+		securityContext = roleGroup.Config.SecurityContext
+	} else {
+		securityContext = instance.Spec.SecurityContext
 	}
 
 	dep := &appsv1.Deployment{
@@ -202,12 +320,12 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 					Labels: mergedLabels,
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: instance.Spec.SecurityContext,
+					SecurityContext: securityContext,
 					Containers: []corev1.Container{
 						{
 							Name:            instance.GetNameWithSuffix("coordinator"),
-							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
-							ImagePullPolicy: instance.Spec.Image.PullPolicy,
+							Image:           image.Repository + ":" + image.Tag,
+							ImagePullPolicy: image.PullPolicy,
 							Resources:       *roleGroup.Config.Resources,
 							Ports: []corev1.ContainerPort{
 								{
@@ -238,7 +356,7 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetNameWithSuffix("coordinator"),
+										Name: instance.GetNameWithSuffix("coordinator" + "-" + roleGroupName),
 									},
 								},
 							},
@@ -268,11 +386,8 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 			},
 		},
 	}
-	if &selectors.NodeSelector != nil {
-		dep.Spec.Template.Spec.NodeSelector = selectors.NodeSelector
-	}
 
-	CoordinatorScheduler(instance, dep, roleGroup)
+	CoordinatorScheduler(dep, roleGroup)
 
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
@@ -303,17 +418,9 @@ func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoClu
 
 	if instance.Spec.Worker.RoleGroups != nil {
 		for roleGroupName, roleGroup := range instance.Spec.Worker.RoleGroups {
-			if roleGroup != nil {
-				if instance.Spec.Worker.Selectors != nil {
-					for _, selectors := range instance.Spec.Worker.Selectors {
-						if selectors != nil {
-							dep := r.makeWorkerDeploymentForRoleGroup(instance, roleGroupName, roleGroup, selectors, r.Scheme)
-							if dep != nil {
-								deployments = append(deployments, dep)
-							}
-						}
-					}
-				}
+			dep := r.makeWorkerDeploymentForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if dep != nil {
+				deployments = append(deployments, dep)
 			}
 		}
 	}
@@ -321,18 +428,14 @@ func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoClu
 	return deployments
 }
 
-func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, selectors *stackv1alpha1.SelectorSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
 
-	if instance.Spec.Worker.Selectors != nil {
-		for _, selectorSpec := range instance.Spec.Worker.Selectors {
-			if selectorSpec != nil && selectorSpec.Selector.MatchLabels != nil {
-				for k, v := range selectorSpec.Selector.MatchLabels {
-					additionalLabels[k] = v
-				}
-			}
+	if roleGroup != nil && roleGroup.Config.MatchLabels != nil {
+		for k, v := range roleGroup.Config.MatchLabels {
+			additionalLabels[k] = v
 		}
 	}
 
@@ -342,6 +445,21 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 	}
 	for key, value := range additionalLabels {
 		mergedLabels[key] = value
+	}
+
+	var image stackv1alpha1.ImageSpec
+	var securityContext *corev1.PodSecurityContext
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Image != nil {
+		image = *roleGroup.Config.Image
+	} else {
+		image = *instance.Spec.Image
+	}
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.SecurityContext != nil {
+		securityContext = roleGroup.Config.SecurityContext
+	} else {
+		securityContext = instance.Spec.SecurityContext
 	}
 
 	dep := &appsv1.Deployment{
@@ -360,12 +478,12 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 					Labels: mergedLabels,
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: instance.Spec.SecurityContext,
+					SecurityContext: securityContext,
 					Containers: []corev1.Container{
 						{
 							Name:            instance.GetNameWithSuffix("worker"),
-							Image:           instance.Spec.Image.Repository + ":" + instance.Spec.Image.Tag,
-							ImagePullPolicy: instance.Spec.Image.PullPolicy,
+							Image:           image.Repository + ":" + image.Tag,
+							ImagePullPolicy: image.PullPolicy,
 							Resources:       *roleGroup.Config.Resources,
 							Ports: []corev1.ContainerPort{
 								{
@@ -396,7 +514,7 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetNameWithSuffix("coordinator"),
+										Name: instance.GetNameWithSuffix("worker" + "-" + roleGroupName),
 									},
 								},
 							},
@@ -427,11 +545,7 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 		},
 	}
 
-	if selectors.NodeSelector != nil {
-		dep.Spec.Template.Spec.NodeSelector = selectors.NodeSelector
-	}
-
-	WorkerScheduler(instance, dep, roleGroup)
+	WorkerScheduler(dep, roleGroup)
 
 	err := ctrl.SetControllerReference(instance, dep, schema)
 	if err != nil {
@@ -473,17 +587,54 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 	return nil
 }
 
-func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCoordinatorConfigMaps(instance *stackv1alpha1.TrinoCluster) []*corev1.ConfigMap {
+	var configMaps []*corev1.ConfigMap
+
+	if instance.Spec.Coordinator.RoleGroups != nil {
+		for roleGroupName, roleGroup := range instance.Spec.Coordinator.RoleGroups {
+			cm := r.makeCoordinatorConfigMapForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if cm != nil {
+				configMaps = append(configMaps, cm)
+			}
+		}
+	}
+
+	return configMaps
+}
+
+func (r *TrinoReconciler) makeCoordinatorConfigMapForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
+
+	var jvmProperties *stackv1alpha1.JvmPropertiesRoleConfigSpec
+	var configProperties *stackv1alpha1.ConfigPropertiesSpec
+	var svc *stackv1alpha1.ServiceSpec
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.JvmProperties != nil {
+		jvmProperties = roleGroup.Config.JvmProperties
+	} else {
+		jvmProperties = instance.Spec.Coordinator.RoleConfig.JvmProperties
+	}
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.ConfigProperties != nil {
+		configProperties = roleGroup.Config.ConfigProperties
+	} else {
+		configProperties = instance.Spec.Coordinator.RoleConfig.ConfigProperties
+	}
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Service != nil {
+		svc = roleGroup.Config.Service
+	} else {
+		svc = instance.Spec.Service
+	}
 
 	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.NodeProperties.Environment + "\n" +
 		"node.data-dir=" + instance.Spec.ClusterConfig.NodeProperties.DataDir + "\n" +
 		"plugin.dir=" + instance.Spec.ClusterConfig.NodeProperties.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
-		"-Xmx" + instance.Spec.Coordinator.RoleConfig.JvmProperties.MaxHeapSize + "\n" +
-		"-XX:+" + instance.Spec.Coordinator.RoleConfig.JvmProperties.GcMethodType + "\n" +
-		"-XX:G1HeapRegionSize=" + instance.Spec.Coordinator.RoleConfig.JvmProperties.G1HeapRegionSize + "\n" +
+		"-Xmx" + jvmProperties.MaxHeapSize + "\n" +
+		"-XX:+" + jvmProperties.GcMethodType + "\n" +
+		"-XX:G1HeapRegionSize=" + jvmProperties.G1HeapRegionSize + "\n" +
 		"-XX:+UseGCOverheadLimit\n" +
 		"-XX:+ExplicitGCInvokesConcurrent\n" +
 		"-XX:+HeapDumpOnOutOfMemoryError\n" +
@@ -498,10 +649,10 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 		"-XX:+UseAESCTRIntrinsics\n"
 
 	configProps := "coordinator=true\n" +
-		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
+		"http-server.http.port=" + strconv.Itoa(int(svc.Port)) + "\n" +
 		"query.max-memory=" + instance.Spec.ClusterConfig.ConfigProperties.QueryMaxMemory + "\n" +
-		"query.max-memory-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.QueryMaxMemoryPerNode + "\n" +
-		"discovery.uri=http://localhost:" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
+		"query.max-memory-per-node=" + configProperties.QueryMaxMemoryPerNode + "\n" +
+		"discovery.uri=http://localhost:" + strconv.Itoa(int(svc.Port)) + "\n"
 
 	if instance.Spec.ClusterConfig.ClusterMode {
 		configProps += "node-scheduler.include-coordinator=false" + "\n"
@@ -509,8 +660,8 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 		configProps += "node-scheduler.include-coordinator=true" + "\n"
 	}
 
-	if instance.Spec.Coordinator.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode != "" {
-		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Coordinator.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode + "\n"
+	if configProperties.MemoryHeapHeadroomPerNode != "" {
+		configProps += "memory.heap-headroom-per-node=" + configProperties.MemoryHeapHeadroomPerNode + "\n"
 	}
 
 	if instance.Spec.ClusterConfig.ConfigProperties.AuthenticationType != "" {
@@ -527,7 +678,7 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.GetNameWithSuffix("coordinator"),
+			Name:      instance.GetNameWithSuffix("coordinator" + "-" + roleGroupName),
 			Namespace: instance.Namespace,
 			Labels:    labels,
 		},
@@ -547,17 +698,54 @@ func (r *TrinoReconciler) makeCoordinatorConfigMap(instance *stackv1alpha1.Trino
 	return &cm
 }
 
-func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeWorkerConfigMaps(instance *stackv1alpha1.TrinoCluster) []*corev1.ConfigMap {
+	var configMaps []*corev1.ConfigMap
+
+	if instance.Spec.Worker.RoleGroups != nil {
+		for roleGroupName, roleGroup := range instance.Spec.Worker.RoleGroups {
+			cm := r.makeWorkerConfigMapForRoleGroup(instance, roleGroupName, roleGroup, r.Scheme)
+			if cm != nil {
+				configMaps = append(configMaps, cm)
+			}
+		}
+	}
+
+	return configMaps
+}
+
+func (r *TrinoReconciler) makeWorkerConfigMapForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
+
+	var jvmProperties *stackv1alpha1.JvmPropertiesRoleConfigSpec
+	var configProperties *stackv1alpha1.ConfigPropertiesSpec
+	var svc *stackv1alpha1.ServiceSpec
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.JvmProperties != nil {
+		jvmProperties = roleGroup.Config.JvmProperties
+	} else {
+		jvmProperties = instance.Spec.Coordinator.RoleConfig.JvmProperties
+	}
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.ConfigProperties != nil {
+		configProperties = roleGroup.Config.ConfigProperties
+	} else {
+		configProperties = instance.Spec.Coordinator.RoleConfig.ConfigProperties
+	}
+
+	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Service != nil {
+		svc = roleGroup.Config.Service
+	} else {
+		svc = instance.Spec.Service
+	}
 
 	nodeProps := "node.environment=" + instance.Spec.ClusterConfig.NodeProperties.Environment + "\n" +
 		"node.data-dir=" + instance.Spec.ClusterConfig.NodeProperties.DataDir + "\n" +
 		"plugin.dir=" + instance.Spec.ClusterConfig.NodeProperties.PluginDir + "\n"
 
 	jvmConfigData := "-server\n" +
-		"-Xmx" + instance.Spec.Worker.RoleConfig.JvmProperties.MaxHeapSize + "\n" +
-		"-XX:+" + instance.Spec.Worker.RoleConfig.JvmProperties.GcMethodType + "\n" +
-		"-XX:G1HeapRegionSize=" + instance.Spec.Worker.RoleConfig.JvmProperties.G1HeapRegionSize + "\n" +
+		"-Xmx" + jvmProperties.MaxHeapSize + "\n" +
+		"-XX:+" + jvmProperties.GcMethodType + "\n" +
+		"-XX:G1HeapRegionSize=" + jvmProperties.G1HeapRegionSize + "\n" +
 		"-XX:+UseGCOverheadLimit\n" +
 		"-XX:+ExplicitGCInvokesConcurrent\n" +
 		"-XX:+HeapDumpOnOutOfMemoryError\n" +
@@ -572,13 +760,13 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 		"-XX:+UseAESCTRIntrinsics\n"
 
 	configProps := "coordinator=false\n" +
-		"http-server.http.port=" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n" +
+		"http-server.http.port=" + strconv.Itoa(int(svc.Port)) + "\n" +
 		"query.max-memory=" + instance.Spec.ClusterConfig.ConfigProperties.QueryMaxMemory + "\n" +
-		"query.max-memory-per-node=" + instance.Spec.Worker.RoleConfig.ConfigProperties.QueryMaxMemoryPerNode + "\n" +
-		"discovery.uri=http://" + instance.Name + ":" + strconv.Itoa(int(instance.Spec.Service.Port)) + "\n"
+		"query.max-memory-per-node=" + configProperties.QueryMaxMemoryPerNode + "\n" +
+		"discovery.uri=http://" + instance.GetNameWithSuffix(roleGroupName) + ":" + strconv.Itoa(int(svc.Port)) + "\n"
 
-	if instance.Spec.Worker.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode != "" {
-		configProps += "memory.heap-headroom-per-node=" + instance.Spec.Worker.RoleConfig.ConfigProperties.MemoryHeapHeadroomPerNode + "\n"
+	if configProperties.MemoryHeapHeadroomPerNode != "" {
+		configProps += "memory.heap-headroom-per-node=" + configProperties.MemoryHeapHeadroomPerNode + "\n"
 	}
 
 	if instance.Spec.ClusterConfig.ConfigProperties.AuthenticationType != "" {
@@ -595,7 +783,7 @@ func (r *TrinoReconciler) makeWorkerConfigMap(instance *stackv1alpha1.TrinoClust
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.GetNameWithSuffix("worker"),
+			Name:      instance.GetNameWithSuffix("worker" + "-" + roleGroupName),
 			Namespace: instance.Namespace,
 			Labels:    labels,
 		},
@@ -695,14 +883,28 @@ func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.TrinoClus
 
 func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
 
-	CoordinatorConfigMap := r.makeCoordinatorConfigMap(instance, r.Scheme)
-	if CoordinatorConfigMap == nil {
-		return nil
+	CoordinatorConfigMap := r.makeCoordinatorConfigMaps(instance)
+	for _, cm := range CoordinatorConfigMap {
+		if cm == nil {
+			continue
+		}
+
+		if err := CreateOrUpdate(ctx, r.Client, cm); err != nil {
+			r.Log.Error(err, "Failed to create or update coordinator configmap", "configmap", cm.Name)
+			return err
+		}
 	}
 
-	WorkerConfigMap := r.makeWorkerConfigMap(instance, r.Scheme)
-	if WorkerConfigMap == nil {
-		return nil
+	WorkerConfigMap := r.makeWorkerConfigMaps(instance)
+	for _, cm := range WorkerConfigMap {
+		if cm == nil {
+			continue
+		}
+
+		if err := CreateOrUpdate(ctx, r.Client, cm); err != nil {
+			r.Log.Error(err, "Failed to create or update worker configmap", "configmap", cm.Name)
+			return err
+		}
 	}
 
 	CatalogConfigMap := r.makeCatalogConfigMap(instance, r.Scheme)
@@ -713,22 +915,6 @@ func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stac
 	SchemasConfigMap := r.makeSchemasConfigMap(instance, r.Scheme)
 	if SchemasConfigMap == nil {
 		return nil
-	}
-
-	coordinatorConfigMap := r.makeCoordinatorConfigMap(instance, r.Scheme)
-	if coordinatorConfigMap != nil {
-		if err := CreateOrUpdate(ctx, r.Client, coordinatorConfigMap); err != nil {
-			r.Log.Error(err, "Failed to create or update coordinator configmap")
-			return err
-		}
-	}
-
-	workerConfigMap := r.makeWorkerConfigMap(instance, r.Scheme)
-	if workerConfigMap != nil {
-		if err := CreateOrUpdate(ctx, r.Client, workerConfigMap); err != nil {
-			r.Log.Error(err, "Failed to create or update worker configmap")
-			return err
-		}
 	}
 
 	catalogConfigMap := r.makeCatalogConfigMap(instance, r.Scheme)
