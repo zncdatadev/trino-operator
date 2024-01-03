@@ -74,10 +74,6 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 
-	if trino.Status == nil {
-		trino.Status = &status.Status{}
-		trino.Status.InitStatus(trino)
-	}
 	// Get the status condition, if it exists and its generation is not the
 	//same as the Trino's generation, reset the status conditions
 	readCondition := apimeta.FindStatusCondition(trino.Status.Conditions, stackv1alpha1.ConditionTypeProgressing)

@@ -222,7 +222,7 @@ type RoleGroupsWorkerSpec struct {
 }
 
 type ConfigRoleGroupSpec struct {
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	Image *ImageSpec `json:"image"`
 
 	// +kubebuilder:validation:Optional
@@ -277,8 +277,8 @@ type TrinoCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TrinoSpec      `json:"spec,omitempty"`
-	Status *status.Status `json:"status,omitempty"`
+	Spec   TrinoSpec     `json:"spec,omitempty"`
+	Status status.Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
