@@ -50,11 +50,11 @@ spec:
         config:
           resources:
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 500Mi
           matchLabels:
             app: default-coordinator
-      foo:
+      large:
         replicas: 1
         config:
           resources:
@@ -78,11 +78,11 @@ spec:
         config:
           resources:
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 500Mi
           matchLabels:
             app: default-worker
-      foo:
+      large:
         replicas: 1
         config:
           resources:

@@ -103,8 +103,6 @@ spec:
                     type: object
                 required:
                 - clusterMode
-                - configProperties
-                - exchangeManager
                 type: object
               coordinator:
                 properties:
@@ -1716,9 +1714,6 @@ spec:
                                   description: Service Type string describes ingress
                                     methods for a service
                                   type: string
-                              required:
-                              - port
-                              - type
                               type: object
                             tolerations:
                               description: The pod this Toleration is attached to
@@ -2011,9 +2006,6 @@ spec:
                     description: Service Type string describes ingress methods for
                       a service
                     type: string
-                required:
-                - port
-                - type
                 type: object
               worker:
                 properties:
@@ -3625,9 +3617,6 @@ spec:
                                   description: Service Type string describes ingress
                                     methods for a service
                                   type: string
-                              required:
-                              - port
-                              - type
                               type: object
                             tolerations:
                               description: The pod this Toleration is attached to
