@@ -5,6 +5,7 @@ on: ['push', 'pull_request']
 jobs:
 
   golang-test:
+    name: Golang Test
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -92,6 +93,7 @@ jobs:
         MARKDOWN_CONFIG_FILE: .markdownlint.yml
 
   deploy-quay:
+    name: Deploy to Quay
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'zncdata-labs'
     runs-on: ubuntu-22.04
     needs:
