@@ -34,7 +34,7 @@ spec:
         enabled: false
     exchangeManager:
       name: "filesystem"
-    clusterMode: false
+    clusterMode: true
   coordinator:
     roleConfig:
       jvmProperties:
@@ -44,30 +44,25 @@ spec:
       configProperties:
         memoryHeapHeadroomPerNode: ""
         queryMaxMemoryPerNode: "1GB"
-    selectors:
-      default:
-        selector:
-          matchLabels:
-            component: coordinator
-      foo:
-        selector:
-          matchLabels:
-            component: coordinator-foo
     roleGroups:
       default:
         replicas: 1
         config:
           resources:
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 500Mi
-      foo:
-        replicas: 2
+          matchLabels:
+            app: default-coordinator
+      large:
+        replicas: 1
         config:
           resources:
             requests:
               cpu: 200m
               memory: 500Mi
+          matchLabels:
+            app: foo-coordinator
   worker:
     roleConfig:
       jvmProperties:
@@ -83,25 +78,19 @@ spec:
         config:
           resources:
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 500Mi
-      foo:
-        replicas: 2
+          matchLabels:
+            app: default-worker
+      large:
+        replicas: 1
         config:
           resources:
             requests:
               cpu: 200m
               memory: 500Mi
-
-    selectors:
-      default:
-        selector:
           matchLabels:
-            app: worker
-      foo:
-        selector:
-          matchLabels:
-            app: worker-foo
+            app: foo-worker
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
