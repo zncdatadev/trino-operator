@@ -92,8 +92,8 @@ jobs:
         LINTER_RULES_PATH: /
         MARKDOWN_CONFIG_FILE: .markdownlint.yml
 
-  deploy-quay:
-    name: Deploy to Quay
+  deploy-operator:
+    name: Deploy operator
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'zncdata-labs'
     runs-on: ubuntu-22.04
     needs:
@@ -124,8 +124,5 @@ jobs:
     - name: Build and push operator bundle
       run: |
         make bundle
-        echho "show current location"
-        echo $PWD
-        echo "show all file in current directory"
-        ls -alh
         make bundle-buildx
+
