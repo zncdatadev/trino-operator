@@ -94,7 +94,7 @@ jobs:
 
   deploy-quay:
     name: Deploy to Quay
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'zncdata-labs'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     needs:
     - golang-test
@@ -124,7 +124,7 @@ jobs:
     - name: Build and push operator bundle
       run: |
         make bundle
-        echho "show current location"
+        echo "show current location"
         echo $PWD
         echo "show all file in current directory"
         ls -alh
