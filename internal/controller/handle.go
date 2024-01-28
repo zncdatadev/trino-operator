@@ -3,11 +3,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/zncdata-labs/operator-go/pkg/errors"
 	"github.com/zncdata-labs/operator-go/pkg/status"
 	"github.com/zncdata-labs/operator-go/pkg/utils"
-	"strconv"
-	"strings"
 
 	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -395,22 +396,6 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 		return nil
 	}
 	return dep
-}
-
-func (r *TrinoReconciler) updateStatusConditionWithDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster, status metav1.ConditionStatus, message string) error {
-	instance.SetStatusCondition(metav1.Condition{
-		Type:               stackv1alpha1.ConditionTypeProgressing,
-		Status:             status,
-		Reason:             stackv1alpha1.ConditionReasonReconcileDeployment,
-		Message:            message,
-		ObservedGeneration: instance.GetGeneration(),
-		LastTransitionTime: metav1.Now(),
-	})
-
-	if err := r.UpdateStatus(ctx, instance); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoCluster) []*appsv1.Deployment {
