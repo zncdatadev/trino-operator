@@ -122,4 +122,8 @@ jobs:
     - name: Build and push operator bundle
       run: |
         make bundle
+        echho "show current location"
+        echo $PWD
+        echo "show all file in current directory"
+        ls -alh
         make bundle-buildx
