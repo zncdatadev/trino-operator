@@ -94,7 +94,7 @@ jobs:
 
   deploy-quay:
     name: Deploy to Quay
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'zncdata-labs'
     runs-on: ubuntu-22.04
     needs:
     - golang-test
