@@ -26,8 +26,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// TrinoSpec defines the desired state of Trino
-type TrinoSpec struct {
+// TrinoClusterSpec defines the desired state of TrinoCluster
+type TrinoClusterSpec struct {
 	// +kubebuilder:validation:Required
 	Image *ImageSpec `json:"image"`
 
@@ -282,18 +282,18 @@ func (r *TrinoCluster) InitStatusConditions() {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// TrinoCluster is the Schema for the trinoes API
+// TrinoCluster is the Schema for the trinoclusters API
 type TrinoCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TrinoSpec     `json:"spec,omitempty"`
-	Status status.Status `json:"status,omitempty"`
+	Spec   TrinoClusterSpec `json:"spec,omitempty"`
+	Status status.Status    `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// TrinoClusterList contains a list of Trino
+// TrinoClusterList contains a list of TrinoCluster
 type TrinoClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
