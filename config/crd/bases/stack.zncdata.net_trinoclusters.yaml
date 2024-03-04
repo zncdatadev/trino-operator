@@ -17,7 +17,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: TrinoCluster is the Schema for the trinoes API
+        description: TrinoCluster is the Schema for the trinoclusters API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -32,7 +32,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TrinoSpec defines the desired state of Trino
+            description: TrinoClusterSpec defines the desired state of TrinoCluster
             properties:
               annotations:
                 additionalProperties:

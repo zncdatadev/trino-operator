@@ -1,4 +1,4 @@
-# permissions for end users to edit trinoes.
+# permissions for end users to edit trinoclusters.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -14,7 +14,7 @@ rules:
 - apiGroups:
   - stack.zncdata.net
   resources:
-  - trinoes
+  - trinoclusters
   verbs:
   - create
   - delete
@@ -26,6 +26,6 @@ rules:
 - apiGroups:
   - stack.zncdata.net
   resources:
-  - trinoes/status
+  - trinoclusters/status
   verbs:
   - get

@@ -13,7 +13,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: TrinoCluster is the Schema for the trinoes API
+    - description: TrinoCluster is the Schema for the trinoclusters API
       displayName: Trino Cluster
       kind: TrinoCluster
       name: trinoclusters.stack.zncdata.net
