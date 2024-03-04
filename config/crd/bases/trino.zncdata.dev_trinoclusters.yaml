@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: trinoclusters.stack.zncdata.net
+  name: trinoclusters.trino.zncdata.dev
 spec:
-  group: stack.zncdata.net
+  group: trino.zncdata.dev
   names:
     kind: TrinoCluster
     listKind: TrinoClusterList

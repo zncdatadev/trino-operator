@@ -1,4 +1,4 @@
-apiVersion: stack.zncdata.net/v1alpha1
+apiVersion: trino.zncdata.dev/v1alpha1
 kind: TrinoCluster
 metadata:
   labels:

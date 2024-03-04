@@ -4,15 +4,15 @@ kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: trino-viewer-role
+    app.kubernetes.io/instance: trinocluster-viewer-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: trino-operator
     app.kubernetes.io/part-of: trino-operator
     app.kubernetes.io/managed-by: kustomize
-  name: trino-viewer-role
+  name: trinocluster-viewer-role
 rules:
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters/status
   verbs:

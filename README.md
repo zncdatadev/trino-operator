@@ -45,7 +45,7 @@ working together seamlessly. Based on Kubernetes, it runs everywhere.
       grpcPodConfig:
         securityContextConfig: restricted
       image: quay.io/zncdata/catalog:v0.0.1-alpha
-      publisher: zncdata.net
+      publisher: zncdata.dev
       sourceType: grpc
       updateStrategy:
         registryPoll:
