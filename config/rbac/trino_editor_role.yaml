@@ -4,15 +4,15 @@ kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: trino-editor-role
+    app.kubernetes.io/instance: trinocluster-editor-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: trino-operator
     app.kubernetes.io/part-of: trino-operator
     app.kubernetes.io/managed-by: kustomize
-  name: trino-editor-role
+  name: trinocluster-editor-role
 rules:
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters/status
   verbs:

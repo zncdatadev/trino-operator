@@ -10,7 +10,7 @@ import (
 	"github.com/zncdata-labs/operator-go/pkg/status"
 	"github.com/zncdata-labs/operator-go/pkg/utils"
 
-	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -19,7 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster) ([]*v1.Ingress, error) {
+func (r *TrinoReconciler) makeIngress(instance *trinov1alpha1.TrinoCluster) ([]*v1.Ingress, error) {
 	var ing []*v1.Ingress
 
 	if instance.Spec.Coordinator.RoleGroups != nil {
@@ -34,7 +34,7 @@ func (r *TrinoReconciler) makeIngress(instance *stackv1alpha1.TrinoCluster) ([]*
 	return ing, nil
 }
 
-func (r *TrinoReconciler) makeIngressForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) (*v1.Ingress, error) {
+func (r *TrinoReconciler) makeIngressForRoleGroup(instance *trinov1alpha1.TrinoCluster, roleGroupName string, roleGroup *trinov1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) (*v1.Ingress, error) {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
@@ -119,7 +119,7 @@ func (r *TrinoReconciler) makeIngressForRoleGroup(instance *stackv1alpha1.TrinoC
 	return ing, nil
 }
 
-func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
+func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *trinov1alpha1.TrinoCluster) error {
 	obj, err := r.makeIngress(instance)
 	if err != nil {
 		return err
@@ -160,7 +160,7 @@ func (r *TrinoReconciler) reconcileIngress(ctx context.Context, instance *stackv
 	return nil
 }
 
-func (r *TrinoReconciler) makeServices(instance *stackv1alpha1.TrinoCluster) ([]*corev1.Service, error) {
+func (r *TrinoReconciler) makeServices(instance *trinov1alpha1.TrinoCluster) ([]*corev1.Service, error) {
 	var services []*corev1.Service
 
 	if instance.Spec.Coordinator.RoleGroups != nil {
@@ -176,7 +176,7 @@ func (r *TrinoReconciler) makeServices(instance *stackv1alpha1.TrinoCluster) ([]
 	return services, nil
 }
 
-func (r *TrinoReconciler) makeServiceForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) (*corev1.Service, error) {
+func (r *TrinoReconciler) makeServiceForRoleGroup(instance *trinov1alpha1.TrinoCluster, roleGroupName string, roleGroup *trinov1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) (*corev1.Service, error) {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
@@ -236,7 +236,7 @@ func (r *TrinoReconciler) makeServiceForRoleGroup(instance *stackv1alpha1.TrinoC
 	return svc, nil
 }
 
-func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
+func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *trinov1alpha1.TrinoCluster) error {
 	services, err := r.makeServices(instance)
 	if err != nil {
 		return err
@@ -256,7 +256,7 @@ func (r *TrinoReconciler) reconcileService(ctx context.Context, instance *stackv
 	return nil
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.TrinoCluster) []*appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeployments(instance *trinov1alpha1.TrinoCluster) []*appsv1.Deployment {
 	var deployments []*appsv1.Deployment
 
 	if instance.Spec.Coordinator.RoleGroups != nil {
@@ -271,7 +271,7 @@ func (r *TrinoReconciler) makeCoordinatorDeployments(instance *stackv1alpha1.Tri
 	return deployments
 }
 
-func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *trinov1alpha1.TrinoCluster, roleGroupName string, roleGroup *trinov1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
@@ -290,7 +290,7 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 		mergedLabels[key] = value
 	}
 
-	var image stackv1alpha1.ImageSpec
+	var image trinov1alpha1.ImageSpec
 	var securityContext *corev1.PodSecurityContext
 
 	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Image != nil {
@@ -398,7 +398,7 @@ func (r *TrinoReconciler) makeCoordinatorDeploymentForRoleGroup(instance *stackv
 	return dep
 }
 
-func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoCluster) []*appsv1.Deployment {
+func (r *TrinoReconciler) makeWorkerDeployments(instance *trinov1alpha1.TrinoCluster) []*appsv1.Deployment {
 	var deployments []*appsv1.Deployment
 
 	if instance.Spec.Worker.RoleGroups != nil {
@@ -413,7 +413,7 @@ func (r *TrinoReconciler) makeWorkerDeployments(instance *stackv1alpha1.TrinoClu
 	return deployments
 }
 
-func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *appsv1.Deployment {
+func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *trinov1alpha1.TrinoCluster, roleGroupName string, roleGroup *trinov1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *appsv1.Deployment {
 	labels := instance.GetLabels()
 
 	additionalLabels := make(map[string]string)
@@ -432,7 +432,7 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 		mergedLabels[key] = value
 	}
 
-	var image stackv1alpha1.ImageSpec
+	var image trinov1alpha1.ImageSpec
 	var securityContext *corev1.PodSecurityContext
 
 	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.Image != nil {
@@ -540,7 +540,7 @@ func (r *TrinoReconciler) makeWorkerDeploymentForRoleGroup(instance *stackv1alph
 	return dep
 }
 
-func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
+func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *trinov1alpha1.TrinoCluster) error {
 	// 处理协调器部署
 	coordinatorDeployments := r.makeCoordinatorDeployments(instance)
 	for _, dep := range coordinatorDeployments {
@@ -572,7 +572,7 @@ func (r *TrinoReconciler) reconcileDeployment(ctx context.Context, instance *sta
 	return nil
 }
 
-func (r *TrinoReconciler) makeCoordinatorConfigMaps(instance *stackv1alpha1.TrinoCluster) []*corev1.ConfigMap {
+func (r *TrinoReconciler) makeCoordinatorConfigMaps(instance *trinov1alpha1.TrinoCluster) []*corev1.ConfigMap {
 	var configMaps []*corev1.ConfigMap
 
 	if instance.Spec.Coordinator.RoleGroups != nil {
@@ -587,12 +587,12 @@ func (r *TrinoReconciler) makeCoordinatorConfigMaps(instance *stackv1alpha1.Trin
 	return configMaps
 }
 
-func (r *TrinoReconciler) makeCoordinatorConfigMapForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCoordinatorConfigMapForRoleGroup(instance *trinov1alpha1.TrinoCluster, roleGroupName string, roleGroup *trinov1alpha1.RoleGroupCoordinatorSpec, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	var jvmProperties *stackv1alpha1.JvmPropertiesRoleConfigSpec
-	var configProperties *stackv1alpha1.ConfigPropertiesSpec
-	var svc *stackv1alpha1.ServiceSpec
+	var jvmProperties *trinov1alpha1.JvmPropertiesRoleConfigSpec
+	var configProperties *trinov1alpha1.ConfigPropertiesSpec
+	var svc *trinov1alpha1.ServiceSpec
 
 	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.JvmProperties != nil {
 		jvmProperties = roleGroup.Config.JvmProperties
@@ -683,7 +683,7 @@ func (r *TrinoReconciler) makeCoordinatorConfigMapForRoleGroup(instance *stackv1
 	return &cm
 }
 
-func (r *TrinoReconciler) makeWorkerConfigMaps(instance *stackv1alpha1.TrinoCluster) []*corev1.ConfigMap {
+func (r *TrinoReconciler) makeWorkerConfigMaps(instance *trinov1alpha1.TrinoCluster) []*corev1.ConfigMap {
 	var configMaps []*corev1.ConfigMap
 
 	if instance.Spec.Worker.RoleGroups != nil {
@@ -698,12 +698,12 @@ func (r *TrinoReconciler) makeWorkerConfigMaps(instance *stackv1alpha1.TrinoClus
 	return configMaps
 }
 
-func (r *TrinoReconciler) makeWorkerConfigMapForRoleGroup(instance *stackv1alpha1.TrinoCluster, roleGroupName string, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeWorkerConfigMapForRoleGroup(instance *trinov1alpha1.TrinoCluster, roleGroupName string, roleGroup *trinov1alpha1.RoleGroupsWorkerSpec, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
-	var jvmProperties *stackv1alpha1.JvmPropertiesRoleConfigSpec
-	var configProperties *stackv1alpha1.ConfigPropertiesSpec
-	var svc *stackv1alpha1.ServiceSpec
+	var jvmProperties *trinov1alpha1.JvmPropertiesRoleConfigSpec
+	var configProperties *trinov1alpha1.ConfigPropertiesSpec
+	var svc *trinov1alpha1.ServiceSpec
 
 	if roleGroup != nil && roleGroup.Config != nil && roleGroup.Config.JvmProperties != nil {
 		jvmProperties = roleGroup.Config.JvmProperties
@@ -806,7 +806,7 @@ func splitLines(s string) []string {
 	return lines
 }
 
-func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeCatalogConfigMap(instance *trinov1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 
 	//hiveName, hivePort := r.GetHiveMetastoreList()
@@ -848,7 +848,7 @@ func (r *TrinoReconciler) makeCatalogConfigMap(instance *stackv1alpha1.TrinoClus
 	return &cm
 }
 
-func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
+func (r *TrinoReconciler) makeSchemasConfigMap(instance *trinov1alpha1.TrinoCluster, schema *runtime.Scheme) *corev1.ConfigMap {
 	labels := instance.GetLabels()
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -866,7 +866,7 @@ func (r *TrinoReconciler) makeSchemasConfigMap(instance *stackv1alpha1.TrinoClus
 	return &cm
 }
 
-func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
+func (r *TrinoReconciler) reconcileConfigMap(ctx context.Context, instance *trinov1alpha1.TrinoCluster) error {
 
 	CoordinatorConfigMap := r.makeCoordinatorConfigMaps(instance)
 	for _, cm := range CoordinatorConfigMap {

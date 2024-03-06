@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
-	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -39,9 +39,9 @@ type TrinoReconciler struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoclusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=stack.zncdata.net,resources=trinoclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -63,7 +63,7 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	r.Log.Info("Reconciling instance")
 
-	trino := &stackv1alpha1.TrinoCluster{}
+	trino := &trinov1alpha1.TrinoCluster{}
 
 	if err := r.Get(ctx, req.NamespacedName, trino); err != nil {
 		if client.IgnoreNotFound(err) != nil {
@@ -76,7 +76,7 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	// Get the status condition, if it exists and its generation is not the
 	//same as the Trino's generation, reset the status conditions
-	readCondition := apimeta.FindStatusCondition(trino.Status.Conditions, stackv1alpha1.ConditionTypeProgressing)
+	readCondition := apimeta.FindStatusCondition(trino.Status.Conditions, trinov1alpha1.ConditionTypeProgressing)
 	if readCondition == nil || readCondition.ObservedGeneration != trino.GetGeneration() {
 		trino.InitStatusConditions()
 
@@ -152,9 +152,9 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if !trino.Status.IsAvailable() {
 
 		trino.SetStatusCondition(metav1.Condition{
-			Type:               stackv1alpha1.ConditionTypeAvailable,
+			Type:               trinov1alpha1.ConditionTypeAvailable,
 			Status:             metav1.ConditionTrue,
-			Reason:             stackv1alpha1.ConditionReasonRunning,
+			Reason:             trinov1alpha1.ConditionReasonRunning,
 			Message:            "Trino is running",
 			ObservedGeneration: trino.GetGeneration(),
 		})
@@ -171,7 +171,7 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // UpdateStatus updates the status of the Trino resource
 // https://stackoverflow.com/questions/76388004/k8s-controller-update-status-and-condition
-func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alpha1.TrinoCluster) error {
+func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *trinov1alpha1.TrinoCluster) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		return r.Status().Update(ctx, instance)
 		//return r.Status().Patch(ctx, instance, client.MergeFrom(instance))
@@ -188,6 +188,6 @@ func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *stackv1alp
 
 func (r *TrinoReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&stackv1alpha1.TrinoCluster{}).
+		For(&trinov1alpha1.TrinoCluster{}).
 		Complete(r)
 }

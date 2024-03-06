@@ -84,7 +84,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters
   verbs:
@@ -96,13 +96,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters/finalizers
   verbs:
   - update
 - apiGroups:
-  - stack.zncdata.net
+  - trino.zncdata.dev
   resources:
   - trinoclusters/status
   verbs:

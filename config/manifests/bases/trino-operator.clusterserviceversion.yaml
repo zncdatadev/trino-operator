@@ -16,7 +16,7 @@ spec:
     - description: TrinoCluster is the Schema for the trinoclusters API
       displayName: Trino Cluster
       kind: TrinoCluster
-      name: trinoclusters.stack.zncdata.net
+      name: trinoclusters.trino.zncdata.dev
       version: v1alpha1
   description: trino for k8s operator
   displayName: trino-operator

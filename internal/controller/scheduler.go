@@ -1,13 +1,13 @@
 package controller
 
 import (
-	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CoordinatorScheduler(dep *appsv1.Deployment, roleGroup *stackv1alpha1.RoleGroupCoordinatorSpec) {
+func CoordinatorScheduler(dep *appsv1.Deployment, roleGroup *trinov1alpha1.RoleGroupCoordinatorSpec) {
 
 	if roleGroup != nil {
 
@@ -206,7 +206,7 @@ func CoordinatorScheduler(dep *appsv1.Deployment, roleGroup *stackv1alpha1.RoleG
 
 }
 
-func WorkerScheduler(dep *appsv1.Deployment, roleGroup *stackv1alpha1.RoleGroupsWorkerSpec) {
+func WorkerScheduler(dep *appsv1.Deployment, roleGroup *trinov1alpha1.RoleGroupsWorkerSpec) {
 
 	if roleGroup != nil {
 
