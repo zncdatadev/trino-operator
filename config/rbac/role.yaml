@@ -7,18 +7,6 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - daemonsets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - deployments
   verbs:
   - create
@@ -59,6 +47,7 @@ rules:
   verbs:
   - get
   - list
+  - watch
 - apiGroups:
   - ""
   resources:

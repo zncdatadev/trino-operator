@@ -1,23 +1,24 @@
-package controller
+package util
 
 import (
 	"context"
 	"fmt"
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"github.com/cisco-open/k8s-objectmatcher/patch"
+	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubectl/pkg/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	logger = ctrl.Log.WithName("utils")
+	logger = ctrl.Log.WithName("util")
 )
 
-func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) error {
+func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) (bool, error) {
 	key := client.ObjectKeyFromObject(obj)
 	namespace := obj.GetNamespace()
 
@@ -29,10 +30,14 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) err
 	err := c.Get(ctx, key, current)
 	if errors.IsNotFound(err) {
 		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-			return err
+			return false, err
 		}
 		logger.Info("Creating a new object", "Kind", kinds, "Namespace", namespace, "Name", name)
-		return c.Create(ctx, obj)
+
+		if err := c.Create(ctx, obj); err != nil {
+			return false, err
+		}
+		return true, nil
 	} else if err == nil {
 		switch obj.(type) {
 		case *corev1.Service:
@@ -60,30 +65,62 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) err
 			resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 			obj.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
-			return c.Update(ctx, obj)
+			if err := c.Update(ctx, obj); err != nil {
+				return false, err
+			}
+			return true, nil
 		}
 
 		if !result.IsEmpty() {
-			logger.Info(fmt.Sprintf("Resource update for object %s:%s", kinds, obj.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()),
+			logger.Info(
+				fmt.Sprintf("Resource update for object %s:%s", kinds, obj.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()),
 				"patch", string(result.Patch),
-				// "original", string(result.Original),
-				// "modified", string(result.Modified),
-				// "current", string(result.Current),
 			)
 
-			err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj)
-			if err != nil {
+			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
 				logger.Error(err, "failed to annotate modified object", "object", obj)
 			}
 
 			resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 			obj.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
-			return c.Update(ctx, obj)
+			if err = c.Update(ctx, obj); err != nil {
+				return false, err
+			}
+			return true, nil
 		}
 
 		logger.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", kinds, obj.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
 
 	}
-	return err
+	return false, err
+}
+
+func ConvertToResourceRequirements(resources *trinov1alpha1.ResourcesSpec) *corev1.ResourceRequirements {
+	var (
+		cpuMin      = resource.MustParse("100m")
+		cpuMax      = resource.MustParse("500")
+		memoryLimit = resource.MustParse("1Gi")
+	)
+	if resources != nil {
+		if resources.CPU != nil && resources.CPU.Min != nil {
+			cpuMin = *resources.CPU.Min
+		}
+		if resources.CPU != nil && resources.CPU.Max != nil {
+			cpuMax = *resources.CPU.Max
+		}
+		if resources.Memory != nil && resources.Memory.Limit != nil {
+			memoryLimit = *resources.Memory.Limit
+		}
+	}
+	return &corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    cpuMax,
+			corev1.ResourceMemory: memoryLimit,
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    cpuMin,
+			corev1.ResourceMemory: memoryLimit,
+		},
+	}
 }

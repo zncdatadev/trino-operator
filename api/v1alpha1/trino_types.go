@@ -25,27 +25,37 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	NodePropertiesFileName            = "node.properties"
+	JvmConfigFileName                 = "jvm.config"
+	ConfigPropertiesFileName          = "config.properties"
+	LogPropertiesFileName             = "log.properties"
+	ExchangeManagerPropertiesFileName = "exchange-manager.properties"
+)
 
-// TrinoClusterSpec defines the desired state of TrinoCluster
-type TrinoClusterSpec struct {
-	// +kubebuilder:validation:Required
-	Image *ImageSpec `json:"image"`
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 
-	// +kubebuilder:validation:Optional
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+// TrinoCluster is the Schema for the trinoclusters API
+type TrinoCluster struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:validation:Optional
-	Service *ServiceSpec `json:"service,omitempty"`
+	Spec   TrinoSpec     `json:"spec,omitempty"`
+	Status status.Status `json:"status,omitempty"`
+}
 
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
+//+kubebuilder:object:root=true
 
-	// +kubebuilder:validation:Optional
-	Ingress *IngressSpec `json:"ingress,omitempty"`
+// TrinoList contains a list of TrinoCluster
+type TrinoList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []TrinoCluster `json:"items"`
+}
 
-	// +kubebuilder:validation:Optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-
+// TrinoSpec defines the desired state of TrinoCluster
+type TrinoSpec struct {
 	// +kubebuilder:validation:Required
 	Coordinator *CoordinatorSpec `json:"coordinator"`
 
@@ -57,12 +67,108 @@ type TrinoClusterSpec struct {
 }
 
 type ClusterConfigSpec struct {
+	// +kubebuilder:validation:Required
+	Image *ImageSpec `json:"image"`
+
+	// +kubebuilder:validation:Optional
+	Service *ServiceSpec `json:"service,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	Ingress *IngressSpec `json:"ingress,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	Catalogs map[string]string `json:"catalogs,omitempty"`
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default:=true
 	ClusterMode bool `json:"clusterMode"`
+}
+
+type CoordinatorSpec struct {
+	// +kubebuilder:validation:Optional
+	Config *ConfigSpec `json:"config,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	RoleGroups map[string]*RoleGroupSpec `json:"roleGroups,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
+
+	//// +kubebuilder:validation:Optional
+	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+}
+
+type WorkerSpec struct {
+	// +kubebuilder:validation:Optional
+	Config *ConfigSpec `json:"config,omitempty"`
+
+	RoleGroups map[string]*RoleGroupSpec `json:"roleGroups,omitempty"`
+
+	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
+
+	//// +kubebuilder:validation:Optional
+	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+}
+
+type RoleGroupSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=1
+	Replicas int32 `json:"replicas,omitempty"`
+
+	Config *ConfigSpec `json:"config,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
+
+	//// +kubebuilder:validation:Optional
+	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+}
+
+type ConfigSpec struct {
+	// +kubebuilder:validation:Optional
+	Resources *ResourcesSpec `json:"resources,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
+
+	// +kubebuilder:validation:Optional
+	Affinity *corev1.Affinity `json:"affinity"`
+
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	Tolerations []corev1.Toleration `json:"tolerations"`
+
+	// +kubebuilder:validation:Optional
+	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	StorageClass string `json:"storageClass,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	NodeProperties *NodePropertiesSpec `json:"nodeProperties,omitempty"`
@@ -71,21 +177,34 @@ type ClusterConfigSpec struct {
 	ConfigProperties *ConfigPropertiesSpec `json:"configProperties,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=INFO
-	LogLevel string `json:"logLevel,omitempty"`
+	Logging *ContainerLoggingSpec `json:"logging,omitempty"`
 }
 
-func (r *TrinoCluster) GetNameWithSuffix(suffix string) string {
-	// return sparkHistory.GetName() + rand.String(5) + suffix
-	return r.GetName() + "-" + suffix
+type ConfigOverridesSpec struct {
+	Node            map[string]string `json:"node.properties,omitempty"`
+	Jvm             string            `json:"jvm.config,omitempty"`
+	Config          map[string]string `json:"config.properties,omitempty"`
+	Log             map[string]string `json:"log.properties,omitempty"`
+	ExchangeManager map[string]string `json:"exchange-manager.properties,omitempty"`
+}
+
+type PodDisruptionBudgetSpec struct {
+	// +kubebuilder:validation:Optional
+	MinAvailable int32 `json:"minAvailable,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	MaxUnavailable int32 `json:"maxUnavailable,omitempty"`
 }
 
 type ImageSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=trinodb/trino
+	// +kubebuilder:default=trinodb/TrinoCluster
 	Repository string `json:"repository,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="423"
@@ -120,7 +239,7 @@ type IngressSpec struct {
 	// +kubebuilder:validation:Optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="spark-history-server.example.com"
+	// +kubebuilder:default:="TrinoCluster.example.com"
 	Host string `json:"host,omitempty"`
 }
 
@@ -129,7 +248,7 @@ type ExchangeManagerSpec struct {
 	// +kubebuilder:default:="filesystem"
 	Name string `json:"name,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/tmp/trino-local-file-system-exchange-manager"
+	// +kubebuilder:default:="/tmp/TrinoCluster-local-file-system-exchange-manager"
 	BaseDir string `json:"baseDir,omitempty"`
 }
 
@@ -138,16 +257,16 @@ type NodePropertiesSpec struct {
 	// +kubebuilder:default:="production"
 	Environment string `json:"environment,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=/data/trino
+	// +kubebuilder:default:=/data/TrinoCluster
 	DataDir string `json:"dataDir,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=/usr/lib/trino/plugin
+	// +kubebuilder:default:=/usr/lib/TrinoCluster/plugin
 	PluginDir string `json:"pluginDir,omitempty"`
 }
 
 type ConfigPropertiesSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/etc/trino"
+	// +kubebuilder:default:="/etc/TrinoCluster"
 	Path string `json:"path,omitempty"`
 	// +kubebuilder:validation:Optional
 	Https *HttpsSpec `json:"https,omitempty"`
@@ -177,22 +296,6 @@ type HttpsSpec struct {
 	KeystorePath string `json:"keystorePath,omitempty"`
 }
 
-type CoordinatorSpec struct {
-	// +kubebuilder:validation:Optional
-	RoleConfig *RoleConfigSpec `json:"roleConfig,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	RoleGroups map[string]*RoleGroupCoordinatorSpec `json:"roleGroups,omitempty"`
-}
-
-type RoleConfigSpec struct {
-	// +kubebuilder:validation:Optional
-	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ConfigProperties *ConfigPropertiesSpec `json:"configProperties,omitempty"`
-}
-
 type JvmPropertiesRoleConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="8G"
@@ -203,67 +306,6 @@ type JvmPropertiesRoleConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="32M"
 	G1HeapRegionSize string `json:"gcHeapRegionSize,omitempty"`
-}
-
-type RoleGroupCoordinatorSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=1
-	Replicas int32 `json:"replicas,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Config *ConfigRoleGroupSpec `json:"config,omitempty"`
-}
-
-type WorkerSpec struct {
-	// +kubebuilder:validation:Optional
-	RoleConfig *RoleConfigSpec `json:"roleConfig,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	RoleGroups map[string]*RoleGroupsWorkerSpec `json:"roleGroups,omitempty"`
-}
-
-type RoleGroupsWorkerSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=1
-	Replicas int32 `json:"replicas,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Config *ConfigRoleGroupSpec `json:"config,omitempty"`
-}
-
-type ConfigRoleGroupSpec struct {
-	// +kubebuilder:validation:Optional
-	Image *ImageSpec `json:"image,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	MatchLabels map[string]string `json:"matchLabels,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Affinity *corev1.Affinity `json:"affinity,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Tolerations *corev1.Toleration `json:"tolerations,omitempty"`
-
-	// +kubebuilder:validation:Required
-	Resources *corev1.ResourceRequirements `json:"resources"`
-
-	// +kubebuilder:validation:Optional
-	Service *ServiceSpec `json:"service,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Ingress *IngressSpec `json:"ingress,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ConfigProperties *ConfigPropertiesSpec `json:"configProperties,omitempty"`
 }
 
 // SetStatusCondition updates the status condition using the provided arguments.
@@ -279,27 +321,9 @@ func (r *TrinoCluster) InitStatusConditions() {
 	r.Status.InitStatusConditions()
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-
-// TrinoCluster is the Schema for the trinoclusters API
-type TrinoCluster struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   TrinoClusterSpec `json:"spec,omitempty"`
-	Status status.Status    `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
-
-// TrinoClusterList contains a list of TrinoCluster
-type TrinoClusterList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TrinoCluster `json:"items"`
-}
-
 func init() {
-	SchemeBuilder.Register(&TrinoCluster{}, &TrinoClusterList{})
+	SchemeBuilder.Register(&TrinoCluster{}, &TrinoList{})
+}
+func (r *TrinoCluster) GetNameWithSuffix(suffix string) string {
+	return r.GetName() + "-" + suffix
 }
