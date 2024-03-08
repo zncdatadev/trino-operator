@@ -197,7 +197,7 @@ func (d *DeploymentReconciler) createVolumes() []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: common.CreateCatalogConfigmapName(d.Instance.GetName(), d.GroupName),
+						Name: common.CreateCatalogConfigmapName(d.Instance.GetName()),
 					},
 				},
 			},
@@ -207,7 +207,7 @@ func (d *DeploymentReconciler) createVolumes() []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: common.CreateSchemaConfigmapName(d.Instance.GetName(), d.GroupName),
+						Name: common.CreateSchemaConfigmapName(d.Instance.GetName()),
 					},
 				},
 			},
@@ -216,7 +216,7 @@ func (d *DeploymentReconciler) createVolumes() []corev1.Volume {
 }
 
 func (d *DeploymentReconciler) getImageSpec() *trinov1alpha1.ImageSpec {
-	return d.Instance.Spec.ClusterConfig.Image
+	return d.Instance.Spec.Image
 }
 
 // get security context

@@ -12,7 +12,7 @@ import (
 )
 
 type PDBReconciler[T client.Object] struct {
-	BaseResourceReconciler[T, any]
+	GeneralResourceStyleReconciler[T, any]
 	name   string
 	labels map[string]string
 	pdb    *trinov1alpha1.PodDisruptionBudgetSpec
@@ -28,7 +28,7 @@ func NewReconcilePDB[T client.Object](
 ) *PDBReconciler[T] {
 	var cfg = &trinov1alpha1.RoleGroupSpec{}
 	return &PDBReconciler[T]{
-		BaseResourceReconciler: *NewBaseResourceReconciler[T, any](
+		GeneralResourceStyleReconciler: *NewGeneraResourceStyleReconciler[T, any](
 			schema,
 			cr,
 			client,
@@ -43,6 +43,9 @@ func NewReconcilePDB[T client.Object](
 }
 
 func (r *PDBReconciler[T]) Build(_ context.Context) (client.Object, error) {
+	if r.pdb == nil {
+		return nil, nil
+	}
 	obj := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.name,

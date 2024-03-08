@@ -13,58 +13,52 @@ spec:
     repository: trinodb/trino
     tag: "423"
     pullPolicy: IfNotPresent
-  service:
-    port: 18080
-    type: ClusterIP
-  ingress:
-    enabled: false
-    annotations:
-      kubernetes.io/ingress.class: traefik
-      nginx.ingress.kubernetes.io/rewrite-target: /
-    host: trino.example.com
   clusterConfig:
-    nodeProperties:
-      environment: "production"
-      dataDir: /data/trino
-      pluginDir: /usr/lib/trino/plugin
-    configProperties:
-      queryMaxMemory: "4GB"
-      path: /etc/trino
-      https:
-        enabled: false
-    exchangeManager:
-      name: "filesystem"
+    service:
+      port: 18080
+      type: ClusterIP
+    ingress:
+      enabled: false
+      annotations:
+        kubernetes.io/ingress.class: traefik
+        nginx.ingress.kubernetes.io/rewrite-target: /
+      host: trino.example.com
     clusterMode: true
   coordinator:
-    roleConfig:
+    config:
+      nodeProperties:
+        environment: "production"
+        dataDir: /data/trino
+        pluginDir: /usr/lib/trino/plugin
+      configProperties:
+        queryMaxMemory: "4GB"
+        path: /etc/trino
+        https:
+          enabled: false
+      exchangeManager:
+        name: "filesystem"
       jvmProperties:
         maxHeapSize: "4G"
         gcMethodType: "UseG1GC"
         gcHeapRegionSize: "32M"
-      configProperties:
-        memoryHeapHeadroomPerNode: ""
-        queryMaxMemoryPerNode: "1GB"
     roleGroups:
       default:
         replicas: 1
         config:
           resources:
-            requests:
-              cpu: 100m
-              memory: 500Mi
-          matchLabels:
+            cpu:
+              min: 100m
+              max: 200m
+            memory:
+              limit: 500Mi
+          nodeSelector:
             app: default-coordinator
-      large:
-        replicas: 1
-        config:
-          resources:
-            requests:
-              cpu: 200m
-              memory: 500Mi
-          matchLabels:
-            app: foo-coordinator
   worker:
-    roleConfig:
+    config:
+      nodeProperties:
+        environment: "production"
+        dataDir: /data/trino
+        pluginDir: /usr/lib/trino/plugin
       jvmProperties:
           maxHeapSize: "8G"
           gcMethodType: "UseG1GC"
@@ -76,21 +70,8 @@ spec:
       default:
         replicas: 1
         config:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 500Mi
-          matchLabels:
+          nodeSelector:
             app: default-worker
-      large:
-        replicas: 1
-        config:
-          resources:
-            requests:
-              cpu: 200m
-              memory: 500Mi
-          matchLabels:
-            app: foo-worker
-  securityContext:
-    runAsUser: 1000
-    fsGroup: 1000
+          securityContext:
+            runAsUser: 1000
+            fsGroup: 1000

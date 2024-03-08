@@ -123,7 +123,7 @@ func (m *RoleGroup) MergeGroupConfigSpec() any {
 }
 
 func (m *RoleGroup) MergeLabels(mergedCfg any) map[string]string {
-	mergedMasterCfg := mergedCfg.(*trinov1alpha1.WorkerSpec)
+	mergedMasterCfg := mergedCfg.(*trinov1alpha1.RoleGroupSpec)
 	roleLabels := m.RoleLabels
 	mergeLabels := make(util.Map)
 	mergeLabels.MapMerge(roleLabels, true)

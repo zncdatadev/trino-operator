@@ -47,8 +47,8 @@ type TrinoCluster struct {
 
 //+kubebuilder:object:root=true
 
-// TrinoList contains a list of TrinoCluster
-type TrinoList struct {
+// TrinoClusterList contains a list of TrinoCluster
+type TrinoClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TrinoCluster `json:"items"`
@@ -56,6 +56,9 @@ type TrinoList struct {
 
 // TrinoSpec defines the desired state of TrinoCluster
 type TrinoSpec struct {
+	// +kubebuilder:validation:Required
+	Image *ImageSpec `json:"image"`
+
 	// +kubebuilder:validation:Required
 	Coordinator *CoordinatorSpec `json:"coordinator"`
 
@@ -67,9 +70,6 @@ type TrinoSpec struct {
 }
 
 type ClusterConfigSpec struct {
-	// +kubebuilder:validation:Required
-	Image *ImageSpec `json:"image"`
-
 	// +kubebuilder:validation:Optional
 	Service *ServiceSpec `json:"service,omitempty"`
 
@@ -322,7 +322,7 @@ func (r *TrinoCluster) InitStatusConditions() {
 }
 
 func init() {
-	SchemeBuilder.Register(&TrinoCluster{}, &TrinoList{})
+	SchemeBuilder.Register(&TrinoCluster{}, &TrinoClusterList{})
 }
 func (r *TrinoCluster) GetNameWithSuffix(suffix string) string {
 	return r.GetName() + "-" + suffix

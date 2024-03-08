@@ -96,7 +96,7 @@ func (c *ClusterConfigMapReconciler) createCatalogConfigmap() client.Object {
 	}
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.CreateCatalogConfigmapName(c.Instance.Name, c.GroupName),
+			Name:      common.CreateCatalogConfigmapName(c.Instance.Name),
 			Namespace: c.Instance.Namespace,
 			Labels:    labels,
 		},
@@ -110,7 +110,7 @@ func (c *ClusterConfigMapReconciler) createSchemaConfigmap() client.Object {
 	labels := c.Instance.GetLabels()
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.CreateSchemaConfigmapName(c.Instance.Name, c.GroupName),
+			Name:      common.CreateSchemaConfigmapName(c.Instance.Name),
 			Namespace: c.Instance.Namespace,
 			Labels:    labels,
 		},

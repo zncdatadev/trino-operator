@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
@@ -81,7 +82,7 @@ func ReconcilerDoHandler(ctx context.Context, reconcilers []ResourceReconciler) 
 				return res, nil
 			}
 		} else {
-			panic("unknown resource reconciler builder")
+			panic(fmt.Sprintf("unknown resource reconciler builder, actual type: %T", r))
 		}
 	}
 	return ctrl.Result{}, nil

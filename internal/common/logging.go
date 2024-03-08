@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,7 @@ func NewLoggingReconciler(
 }
 
 // Build log4j config map
-func (l *LoggingRecociler) Build() (client.Object, error) {
+func (l *LoggingRecociler) Build(_ context.Context) (client.Object, error) {
 	cmData := l.RoleLoggingDataBuilder.MakeContainerLogData()
 	if len(cmData) == 0 {
 		return nil, nil

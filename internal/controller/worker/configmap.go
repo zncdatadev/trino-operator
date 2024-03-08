@@ -47,11 +47,11 @@ func (c *ConfigMapReconciler) Build(_ context.Context) (client.Object, error) {
 			Labels:    c.MergedLabels,
 		},
 		Data: map[string]string{
-			"node.properties":             *c.makeNodeConfigData(),
-			"jvm.config":                  *c.makeJvmConfigData(),
-			"config.properties":           *c.makeConfigPropertiesData(),
-			"log.properties":              *c.makeLogPropertiesData(),
-			"exchange-manager.properties": *c.makeExchangeManagerPropertiesData(),
+			trinov1alpha1.NodePropertiesFileName:            c.makeNodeConfigData(),
+			trinov1alpha1.JvmConfigFileName:                 c.makeJvmConfigData(),
+			trinov1alpha1.ConfigPropertiesFileName:          c.makeConfigPropertiesData(),
+			trinov1alpha1.LogPropertiesFileName:             c.makeLogPropertiesData(),
+			trinov1alpha1.ExchangeManagerPropertiesFileName: c.makeExchangeManagerPropertiesData(),
 		},
 	}
 	return cm, nil
@@ -95,13 +95,13 @@ node.data-dir=%s
 plugin.dir=%s
 `
 
-func (c *ConfigMapReconciler) makeNodeConfigData() *string {
+func (c *ConfigMapReconciler) makeNodeConfigData() string {
 	cfg := c.MergedCfg
 	if nodeSpec := cfg.Config.NodeProperties; nodeSpec != nil {
 		nodeProperties := fmt.Sprintf(nodePropsTemplate, nodeSpec.Environment, nodeSpec.DataDir, nodeSpec.PluginDir)
-		return &nodeProperties
+		return nodeProperties
 	}
-	return nil
+	return ""
 }
 
 // create jvm.config
@@ -123,13 +123,13 @@ const jvmPropsTemplate = `-server
 -XX:+UseAESCTRIntrinsics
 `
 
-func (c *ConfigMapReconciler) makeJvmConfigData() *string {
+func (c *ConfigMapReconciler) makeJvmConfigData() string {
 	cfg := c.MergedCfg
 	if jvmSpec := cfg.Config.JvmProperties; jvmSpec != nil {
 		jvmConfig := fmt.Sprintf(jvmPropsTemplate, jvmSpec.MaxHeapSize, jvmSpec.GcMethodType, jvmSpec.G1HeapRegionSize)
-		return &jvmConfig
+		return jvmConfig
 	}
-	return nil
+	return ""
 }
 
 // create config.properties
@@ -140,7 +140,7 @@ query.max-memory-per-node=%s
 discovery.uri=http://%s:%s
 `
 
-func (c *ConfigMapReconciler) makeConfigPropertiesData() *string {
+func (c *ConfigMapReconciler) makeConfigPropertiesData() string {
 	cfg := c.MergedCfg
 	if configSpec := cfg.Config.ConfigProperties; configSpec != nil {
 		svc := c.getServiceSpec()
@@ -154,31 +154,31 @@ func (c *ConfigMapReconciler) makeConfigPropertiesData() *string {
 		if configSpec.AuthenticationType != "" {
 			configProperties += "http-server.authentication.type=" + configSpec.AuthenticationType + "\n"
 		}
-		return &configProperties
+		return configProperties
 	}
-	return nil
+	return ""
 }
 
 // create log.properties
 var defaultLogProperties = `io.trino=INFO`
 
-func (c *ConfigMapReconciler) makeLogPropertiesData() *string {
-	return &defaultLogProperties
+func (c *ConfigMapReconciler) makeLogPropertiesData() string {
+	return defaultLogProperties
 }
 
 // create exchange-manager.properties
 const exchangeManagerPropsTemplate = "exchange-manager.name=%s"
 
-func (c *ConfigMapReconciler) makeExchangeManagerPropertiesData() *string {
+func (c *ConfigMapReconciler) makeExchangeManagerPropertiesData() string {
 	cfg := c.MergedCfg
 	if exchangeManagerSpec := cfg.Config.ExchangeManager; exchangeManagerSpec != nil {
 		exchangeManagerProperties := fmt.Sprintf(exchangeManagerPropsTemplate, exchangeManagerSpec.Name) + "\n"
 		if exchangeManagerSpec.Name == "filesystem" {
 			exchangeManagerProperties += "exchange.base-directories=" + exchangeManagerSpec.BaseDir
 		}
-		return &exchangeManagerProperties
+		return exchangeManagerProperties
 	}
-	return nil
+	return ""
 }
 
 // get serviceSpec

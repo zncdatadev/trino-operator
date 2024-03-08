@@ -7,5 +7,5 @@ func createWorkerConfigmapName(instanceName string, groupName string) string {
 }
 
 func createWorkerDeploymentName(instanceName string, groupName string) string {
-	return common.NewResourceNameGenerator(instanceName, string(common.Coordinator), groupName).GenerateResourceName("")
+	return common.NewResourceNameGenerator(instanceName, string(common.Worker), groupName).GenerateResourceName("")
 }

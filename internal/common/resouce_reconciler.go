@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	opgostatus "github.com/zncdata-labs/operator-go/pkg/status"
 	"github.com/zncdata-labs/trino-operator/internal/util"
 	corev1 "k8s.io/api/core/v1"
@@ -110,7 +111,7 @@ func (b *BaseResourceReconciler[T, G]) ReconcileResource(
 	if handler, ok := resInstance.(ResourceHandler); ok {
 		return handler.DoReconcile(ctx, obj, handler)
 	} else {
-		panic("resource is not ResourceHandler")
+		panic(fmt.Sprintf("resource is not ResourceHandler, actual is - %T", resInstance))
 	}
 }
 
@@ -379,16 +380,16 @@ func (s *MultiConfigurationStyleReconciler[T, G]) ReconcileResource(
 		return ctrl.Result{}, err
 	}
 	for _, reconciler := range reconcilers {
-		obj, err := reconciler.Build(ctx)
+		resource, err := reconciler.Build(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		//resInstance reconcile
 		//return b.DoReconcile(ctx, resource)
-		if handler, ok := resInstance.(ResourceHandler); ok {
-			return handler.DoReconcile(ctx, obj, handler)
+		if handler, ok := reconciler.(ResourceHandler); ok {
+			return handler.DoReconcile(ctx, resource, handler)
 		} else {
-			panic("resource is not ResourceHandler")
+			panic(fmt.Sprintf("resource is not ResourceHandler, actual is - %T", resource))
 		}
 	}
 	return ctrl.Result{}, nil

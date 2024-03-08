@@ -43,20 +43,6 @@ spec:
                   clusterMode:
                     default: true
                     type: boolean
-                  image:
-                    properties:
-                      pullPolicy:
-                        default: IfNotPresent
-                        description: PullPolicy describes a policy for if/when to
-                          pull a container image
-                        type: string
-                      repository:
-                        default: trinodb/TrinoCluster
-                        type: string
-                      tag:
-                        default: "423"
-                        type: string
-                    type: object
                   ingress:
                     properties:
                       annotations:
@@ -114,7 +100,6 @@ spec:
                     type: object
                 required:
                 - clusterMode
-                - image
                 type: object
               coordinator:
                 properties:
@@ -3270,6 +3255,20 @@ spec:
                           type: integer
                       type: object
                     type: object
+                type: object
+              image:
+                properties:
+                  pullPolicy:
+                    default: IfNotPresent
+                    description: PullPolicy describes a policy for if/when to pull
+                      a container image
+                    type: string
+                  repository:
+                    default: trinodb/TrinoCluster
+                    type: string
+                  tag:
+                    default: "423"
+                    type: string
                 type: object
               worker:
                 properties:
@@ -6428,6 +6427,7 @@ spec:
                 type: object
             required:
             - coordinator
+            - image
             - worker
             type: object
           status:
