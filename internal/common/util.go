@@ -67,9 +67,9 @@ func CreateRoleGroupLoggingConfigMapName(instanceName string, role string, group
 
 func ConvertToResourceRequirements(resources *trinov1alpha1.ResourcesSpec) *corev1.ResourceRequirements {
 	var (
-		cpuMin      = resource.MustParse("100m")
-		cpuMax      = resource.MustParse("500")
-		memoryLimit = resource.MustParse("1Gi")
+		cpuMin      = resource.MustParse(trinov1alpha1.CpuMin)
+		cpuMax      = resource.MustParse(trinov1alpha1.CpuMax)
+		memoryLimit = resource.MustParse(trinov1alpha1.MemoryLimit)
 	)
 	if resources != nil {
 		if resources.CPU != nil && resources.CPU.Min != nil {
@@ -92,4 +92,15 @@ func ConvertToResourceRequirements(resources *trinov1alpha1.ResourcesSpec) *core
 			corev1.ResourceMemory: memoryLimit,
 		},
 	}
+}
+
+func GetExchangeManagerSpec(cfg *trinov1alpha1.RoleGroupSpec) *trinov1alpha1.ExchangeManagerSpec {
+	spec := cfg.Config.ExchangeManager
+	if spec == nil {
+		spec = &trinov1alpha1.ExchangeManagerSpec{
+			Name:    trinov1alpha1.ExchangeManagerName,
+			BaseDir: trinov1alpha1.ExchangeManagerBaseDir,
+		}
+	}
+	return spec
 }

@@ -171,7 +171,7 @@ const exchangeManagerPropsTemplate = "exchange-manager.name=%s"
 
 func (c *ConfigMapReconciler) makeExchangeManagerPropertiesData() string {
 	cfg := c.MergedCfg
-	if exchangeManagerSpec := cfg.Config.ExchangeManager; exchangeManagerSpec != nil {
+	if exchangeManagerSpec := common.GetExchangeManagerSpec(cfg); exchangeManagerSpec != nil {
 		exchangeManagerProperties := fmt.Sprintf(exchangeManagerPropsTemplate, exchangeManagerSpec.Name) + "\n"
 		if exchangeManagerSpec.Name == "filesystem" {
 			exchangeManagerProperties += "exchange.base-directories=" + exchangeManagerSpec.BaseDir
