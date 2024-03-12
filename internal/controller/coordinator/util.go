@@ -19,8 +19,8 @@ func getServiceSpec(instance *trinov1alpha1.TrinoCluster) *trinov1alpha1.Service
 	spec := instance.Spec.ClusterConfig.Service
 	if spec == nil {
 		spec = &trinov1alpha1.ServiceSpec{
-			Type: "ClusterIP",
-			Port: 9083,
+			Type: trinov1alpha1.ServiceType,
+			Port: trinov1alpha1.ServicePort,
 		}
 	}
 	return spec

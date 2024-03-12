@@ -387,7 +387,10 @@ func (s *MultiConfigurationStyleReconciler[T, G]) ReconcileResource(
 		//resInstance reconcile
 		//return b.DoReconcile(ctx, resource)
 		if handler, ok := reconciler.(ResourceHandler); ok {
-			return handler.DoReconcile(ctx, resource, handler)
+			_, err := handler.DoReconcile(ctx, resource, handler)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		} else {
 			panic(fmt.Sprintf("resource is not ResourceHandler, actual is - %T", resource))
 		}

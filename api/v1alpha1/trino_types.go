@@ -33,6 +33,23 @@ const (
 	ExchangeManagerPropertiesFileName = "exchange-manager.properties"
 )
 
+const (
+	// resource
+	CpuMin      = "1"
+	CpuMax      = "1.5"
+	MemoryLimit = "1.5Gi"
+
+	//service
+	ServiceType = "ClusterIP"
+	ServicePort = 18080
+
+	//exchange manager
+	ExchangeManagerName    = "filesystem"
+	ExchangeManagerBaseDir = "/tmp/TrinoCluster-local-file-system-exchange-manager"
+)
+
+const ()
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
