@@ -101,6 +101,15 @@ spec:
                 required:
                 - clusterMode
                 type: object
+              clusterOperation:
+                properties:
+                  reconciliationPaused:
+                    default: false
+                    type: boolean
+                  stopped:
+                    default: false
+                    type: boolean
+                type: object
               coordinator:
                 properties:
                   commandArgsOverrides:
@@ -1230,6 +1239,9 @@ spec:
                             default: filesystem
                             type: string
                         type: object
+                      gracefulShutdownTimeout:
+                        description: Use time.ParseDuration to parse the string
+                        type: string
                       jvmProperties:
                         properties:
                           gcHeapRegionSize:
@@ -1353,8 +1365,6 @@ spec:
                                 type: string
                             type: object
                         type: object
-                      storageClass:
-                        type: string
                       tolerations:
                         items:
                           description: The pod this Toleration is attached to tolerates
@@ -2669,6 +2679,9 @@ spec:
                                   default: filesystem
                                   type: string
                               type: object
+                            gracefulShutdownTimeout:
+                              description: Use time.ParseDuration to parse the string
+                              type: string
                             jvmProperties:
                               properties:
                                 gcHeapRegionSize:
@@ -2801,8 +2814,6 @@ spec:
                                       type: string
                                   type: object
                               type: object
-                            storageClass:
-                              type: string
                             tolerations:
                               items:
                                 description: The pod this Toleration is attached to
@@ -13084,6 +13095,9 @@ spec:
                             default: filesystem
                             type: string
                         type: object
+                      gracefulShutdownTimeout:
+                        description: Use time.ParseDuration to parse the string
+                        type: string
                       jvmProperties:
                         properties:
                           gcHeapRegionSize:
@@ -13207,8 +13221,6 @@ spec:
                                 type: string
                             type: object
                         type: object
-                      storageClass:
-                        type: string
                       tolerations:
                         items:
                           description: The pod this Toleration is attached to tolerates
@@ -22830,6 +22842,9 @@ spec:
                                   default: filesystem
                                   type: string
                               type: object
+                            gracefulShutdownTimeout:
+                              description: Use time.ParseDuration to parse the string
+                              type: string
                             jvmProperties:
                               properties:
                                 gcHeapRegionSize:
@@ -22962,8 +22977,6 @@ spec:
                                       type: string
                                   type: object
                               type: object
-                            storageClass:
-                              type: string
                             tolerations:
                               items:
                                 description: The pod this Toleration is attached to

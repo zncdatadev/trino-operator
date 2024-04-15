@@ -3,6 +3,11 @@ package coordinator
 import (
 	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	"github.com/zncdata-labs/trino-operator/internal/common"
+	ctrl "sigs.k8s.io/controller-runtime"
+)
+
+var (
+	logger = ctrl.Log.WithName("coordinator")
 )
 
 func createIngName(instanceName string, groupName string) string {

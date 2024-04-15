@@ -84,6 +84,19 @@ type TrinoSpec struct {
 
 	// +kubebuilder:validation:Optional
 	ClusterConfig *ClusterConfigSpec `json:"clusterConfig,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	ClusterOperation *ClusterOperationSpec `json:"clusterOperation,omitempty"`
+}
+
+type ClusterOperationSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	ReconciliationPaused bool `json:"reconciliationPaused,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	Stopped bool `json:"stopped,omitempty"`
 }
 
 type ClusterConfigSpec struct {
@@ -181,8 +194,9 @@ type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 
+	// Use time.ParseDuration to parse the string
 	// +kubebuilder:validation:Optional
-	StorageClass string `json:"storageClass,omitempty"`
+	GracefulShutdownTimeout *string `json:"gracefulShutdownTimeout,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	NodeProperties *NodePropertiesSpec `json:"nodeProperties,omitempty"`

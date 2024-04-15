@@ -2,9 +2,9 @@ package controller
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/go-logr/logr"
-	stackv1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	"github.com/zncdata-labs/trino-operator/internal/common"
 	"github.com/zncdata-labs/trino-operator/internal/controller/coordinator"
 	"github.com/zncdata-labs/trino-operator/internal/controller/worker"
@@ -13,37 +13,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type TrinoInstance struct {
-	instance *stackv1alpha1.TrinoCluster
-}
-
-// GetClusterConfig implement InstanceAttributes interface
-func (t *TrinoInstance) GetClusterConfig() any {
-	return t.instance.Spec.ClusterConfig
-}
-
-func (t *TrinoInstance) GetRoleConfigSpec(role common.Role) (any, error) {
-	switch role {
-	case common.Coordinator:
-		return t.instance.Spec.Coordinator, nil
-	case common.Worker:
-		return t.instance.Spec.Worker, nil
-	default:
-		return nil, fmt.Errorf("role %s not found", role)
-	}
-}
-
 type ClusterReconciler struct {
 	client client.Client
 	scheme *runtime.Scheme
-	cr     *stackv1alpha1.TrinoCluster
+	cr     *trinov1alpha1.TrinoCluster
 	Log    logr.Logger
 
 	roleReconcilers     []common.RoleReconciler
 	resourceReconcilers []common.ResourceReconciler
 }
 
-func NewClusterReconciler(client client.Client, scheme *runtime.Scheme, cr *stackv1alpha1.TrinoCluster) *ClusterReconciler {
+func NewClusterReconciler(client client.Client, scheme *runtime.Scheme, cr *trinov1alpha1.TrinoCluster) *ClusterReconciler {
 	c := &ClusterReconciler{
 		client: client,
 		scheme: scheme,

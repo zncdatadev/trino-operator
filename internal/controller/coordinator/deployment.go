@@ -3,6 +3,7 @@ package coordinator
 import (
 	"context"
 	"maps"
+	"time"
 
 	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
 	"github.com/zncdata-labs/trino-operator/internal/common"
@@ -46,7 +47,7 @@ func (d *DeploymentReconciler) GetConditions() *[]metav1.Condition {
 }
 
 // Build implements the ResourceBuilder interface
-func (d *DeploymentReconciler) Build(_ context.Context) (client.Object, error) {
+func (d *DeploymentReconciler) Build(ctx context.Context) (client.Object, error) {
 	podTemplate := d.getPodTemplate()
 
 	dep := &appsv1.Deployment{
@@ -56,7 +57,7 @@ func (d *DeploymentReconciler) Build(_ context.Context) (client.Object, error) {
 			Labels:    d.MergedLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: d.getReplicas(),
+			Replicas: d.getReplicas(ctx),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: d.MergedLabels,
 			},
@@ -111,18 +112,25 @@ func (d *DeploymentReconciler) getPodTemplate() corev1.PodTemplateSpec {
 
 	maps.Copy(podTemplate.ObjectMeta.Labels, d.MergedLabels)
 
-	if podTemplate.Spec.Containers == nil {
-		podTemplate.Spec.Containers = make([]corev1.Container, 0)
-	}
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, d.createContainer())
-
-	if podTemplate.Spec.Volumes == nil {
-		podTemplate.Spec.Volumes = make([]corev1.Volume, 0)
-	}
 
 	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, d.createVolumes()...)
 
+	seconds := d.getTerminationGracePeriodSeconds()
+	if d.MergedCfg.Config.GracefulShutdownTimeout != nil {
+		podTemplate.Spec.TerminationGracePeriodSeconds = seconds
+	}
 	return podTemplate
+}
+
+func (d *DeploymentReconciler) getTerminationGracePeriodSeconds() *int64 {
+	if d.MergedCfg.Config.GracefulShutdownTimeout != nil {
+		if tiime, err := time.ParseDuration(*d.MergedCfg.Config.GracefulShutdownTimeout); err == nil {
+			seconds := int64(tiime.Seconds())
+			return &seconds
+		}
+	}
+	return nil
 }
 
 // is loggers override enabled
@@ -241,8 +249,27 @@ func (d *DeploymentReconciler) getImageSpec() *trinov1alpha1.ImageSpec {
 }
 
 // get replicas
-func (d *DeploymentReconciler) getReplicas() *int32 {
+func (d *DeploymentReconciler) getReplicas(ctx context.Context) *int32 {
+	if d.shouldStop(ctx) {
+		logger.Info("Stop the cluster, set replicas to 0")
+		reps := int32(0)
+		return &reps
+	}
 	return &d.MergedCfg.Replicas
+}
+
+func (d *DeploymentReconciler) shouldStop(ctx context.Context) bool {
+
+	clusterOperation := common.NewClusterOperation(
+		&common.TrinoInstance{Instance: d.Instance},
+		common.ResourceClient{
+			Ctx:       ctx,
+			Client:    d.Client,
+			Namespace: d.Instance.Namespace,
+		},
+	)
+
+	return clusterOperation.ClusterStop()
 }
 
 // get resources
