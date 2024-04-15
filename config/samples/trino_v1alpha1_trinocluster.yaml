@@ -60,18 +60,15 @@ spec:
         dataDir: /data/trino
         pluginDir: /usr/lib/trino/plugin
       jvmProperties:
-          maxHeapSize: "8G"
-          gcMethodType: "UseG1GC"
-          gcHeapRegionSize: "32M"
+        maxHeapSize: "8G"
+        gcMethodType: "UseG1GC"
+        gcHeapRegionSize: "32M"
       configProperties:
-          memoryHeapHeadroomPerNode: ""
-          queryMaxMemoryPerNode: "1GB"
+        memoryHeapHeadroomPerNode: ""
+        queryMaxMemoryPerNode: "1GB"
     roleGroups:
       default:
         replicas: 1
         config:
           nodeSelector:
             app: default-worker
-          securityContext:
-            runAsUser: 1000
-            fsGroup: 1000

@@ -72,6 +72,3 @@ spec:
         config:
           nodeSelector:
             app: default-worker
-          securityContext:
-            runAsUser: 1000
-            fsGroup: 1000

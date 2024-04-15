@@ -141,8 +141,8 @@ type WorkerSpec struct {
 	// +kubebuilder:validation:Optional
 	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
 
-	//// +kubebuilder:validation:Optional
-	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+	// +kubebuilder:validation:Optional
+	PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
 }
 
 type RoleGroupSpec struct {
@@ -161,16 +161,13 @@ type RoleGroupSpec struct {
 	// +kubebuilder:validation:Optional
 	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
 
-	//// +kubebuilder:validation:Optional
-	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+	// +kubebuilder:validation:Optional
+	PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
 }
 
 type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	Resources *ResourcesSpec `json:"resources,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext"`
 
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
