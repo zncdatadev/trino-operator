@@ -1,0 +1,99 @@
+---
+defaultChannel: stable
+description: |
+  # Zncdata Stack Operator for Trino
+
+  [![Build Status](https://travis-ci.org/zncdata/trino-operator.svg?branch=main)](https://travis-ci.org/zncdata/trino-operator)
+  [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+
+  [//]: # ([![codecov]&#40;https://codecov.io/gh/zncdata/trino-operator/branch/main/graph/badge.svg&#41;]&#40;https://codecov.io/gh/zncdata/trino-operator&#41;)
+
+  This is a Kubernetes operator to manage [Trino](https://trino.io/) ensembles.
+
+  It is part of the Stack ZncData Platform,
+  a curated selection of the best open source data apps like Apache Hive, Apache Druid, Trino or Apache Spark,
+  working together seamlessly. Based on Kubernetes, it runs everywhere.
+
+  ## Quick Start
+
+  1. Install Operator Lifecycle Manager (OLM), a tool to help manage the Operators running on your cluster.
+
+      ```bash
+      curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.26.0/install.sh | bash -s v0.26.0
+      ```
+
+  2. First we need to prepare an OperatorGroup
+
+      ```bash
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: operatorgroup
+      spec:
+        targetNamespaces:
+        - tmp
+        upgradeStrategy: Default
+      ```
+
+  3. Start deploying our catalog
+
+      ```bash
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: CatalogSource
+      metadata:
+        name: catalog-v0-0-1-alpha
+        namespace: tmp
+      spec:
+        displayName: zncdata operators
+        grpcPodConfig:
+          securityContextConfig: restricted
+        image: quay.io/zncdata/catalog:v0.0.1-alpha
+        publisher: zncdata.dev
+        sourceType: grpc
+        updateStrategy:
+          registryPoll:
+            interval: 60m
+      ```
+
+  4. After completing the OperatorGroup and Catalog, you can start installing the service Subscription
+
+      ```bash
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: trino-operator-v0-0-1-alpha-sub
+        namespace: tmp
+      spec:
+        channel: fast-v0.0
+        name: trino-operator
+        source: catalog
+        sourceNamespace: tmp
+        installPlanApproval: Automatic
+        startingCSV: trino-operator.v0.0.1-alpha
+      ```
+
+  5. After install, watch your operator come up using next command.
+
+      ```bash
+      kubectl get csv -n tmp
+      ```
+
+  6. Install Instances of Custom Resources:
+
+      ```sh
+      kubectl apply -f config/samples/
+      ```
+icon:
+  base64data: PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0Mi4xIDYyLjQ1Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9LmNscy0ye2ZpbGw6I2RkMDBhMTt9LmNscy0ze2ZpbGw6I2Y5ZDhkMjt9LmNscy00e2ZpbGw6IzEwMTEwZTt9LmNscy01e2ZpbGw6I2U1ZTVlNTt9LmNscy02e2ZpbGw6IzhhY2NjZTtvcGFjaXR5OjAuMjtpc29sYXRpb246aXNvbGF0ZTt9LmNscy03e2ZpbGw6IzUxNTE1MTt9PC9zdHlsZT48L2RlZnM+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMTQuMjQsNTUuMzZjLjkyLS42MS0xLjQ5LS4zOC0xLjY5LS43OWExNSwxNSwwLDAsMS0yLjgyLS41MUM4LDUzLjYyLDMuOSw1MC44NSwzLjQ3LDQ4LjI1czAtNy42NSwxLjgzLTEwLjYxQTE3LDE3LDAsMCwxLDkuNzMsMzNTNi4xNiwyNC41MSw1Ljg1LDE4LjEsNiwuMjEsMTAuMjQsMHMzLjQ5LDEwLjQ4LDIuODIsMTcuNDNhODkuNDcsODkuNDcsMCwwLDAtLjIxLDEzLjg5LDE5LjQ1LDE5LjQ1LDAsMCwxLDUuNTEtLjkyLDIxLjIsMjEuMiwwLDAsMSw0LjkuNDZTMjQuNTgsMjEsMjksMTQuODYsMzgsMi40LDQxLDQuMTlzLS44MSw4LjE5LTMuNDYsMTEuNTItNy4yNSw4LjMzLTguNzgsMTFhNDcuMjYsNDcuMjYsMCwwLDAtMi42NSw1LjUxLDE1LDE1LDAsMCwxLDYuNCw2LjMyYzIuMDcsNC4yOCwyLjI3LDkuNTksMS4xNSwxMS44M2E4LjEsOC4xLDAsMCwxLTUuNjEsNGMtMS4zMi4xLTYuOTEsMS40OC02LjkxLDEuNDhaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy0yIiBkPSJNMjQsMzAuOTRzMy4zMy04LjcsNi4zMi0xMy42LDctOC41OSw4LjI2LTcuODRTMzYsMTQuODUsMzIuNjYsMTkuMzJhMTEyLjMsMTEyLjMsMCwwLDAtNy40NCwxMi4zN1oiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMCkiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0xMC42NCwzMi40NGwuOTUtLjc1cy0uMTMtOC43LDAtMTRTMTIsNS43OCwxMC4yMyw1Ljg1LDcuMjMsMTEsNy45MiwxOC4yM0E4Ni45Miw4Ni45MiwwLDAsMCwxMC42NCwzMi40NFoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMCkiLz48Y2lyY2xlIGNsYXNzPSJjbHMtMyIgY3g9IjcuNjUiIGN5PSI0OS4xNyIgcj0iMS45NCIvPjxjaXJjbGUgY2xhc3M9ImNscy0zIiBjeD0iMzAuNTciIGN5PSI0OS4xNyIgcj0iMS45NCIvPjxwYXRoIGNsYXNzPSJjbHMtNCIgZD0iTTIyLjMzLDQ5YS4xOS4xOSwwLDAsMC0uMjUsMGgwcy0uNTcsMS0xLjQxLDEuMDZhMi4xMSwyLjExLDAsMCwxLTEuNS0uN1Y0OGMuNTQtLjI5LDEuNDEtMS4xOSwxLjQxLTEuNWExLjQsMS40LDAsMCwwLTEuNS0xLjA5Yy0xLDAtMS43LjY1LTEuNywxLjE5czEuMSwxLjIzLDEuNDEsMS40NHYxLjQ1YTEuNzcsMS43NywwLDAsMS0xLjMuN2MtLjgsMC0xLjQtMS4wOC0xLjQtMS4wOWEuMTkuMTksMCwwLDAtLjI1LS4wOGgwYS4xOC4xOCwwLDAsMC0uMDguMjNoMGMwLC4wNi43MSwxLjI5LDEuNzMsMS4yOWEyLjA3LDIuMDcsMCwwLDAsMS41LS43MiwyLjQ2LDIuNDYsMCwwLDAsMS41OS43M2guMTRhMi40NywyLjQ3LDAsMCwwLDEuNzEtMS4yNS4xOC4xOCwwLDAsMCwwLS4yNUEuMjQuMjQsMCwwLDAsMjIuMzMsNDlaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy01IiBkPSJNOS43MywzM1M3LDI2LDYuNDIsMjIuMjlzLTEtOS43OC0uMy0xMy44NUE0Ni4zLDQ2LjMsMCwwLDEsNy4zMSwyLjg1UzYsMTIuMzQsNi40OSwxNi40OSw5LjczLDMzLDkuNzMsMzNaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy01IiBkPSJNMjMuMjYsMzAuODVzMi0xMC41OSw0LjkxLTE0Ljc2UzM0LjczLDYuOSwzNi41Miw1LjYybDEuODItMS4yOFMzMSwxMiwyOC4xNywxOC4zNCwyMy4yNiwzMC44NSwyMy4yNiwzMC44NVoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMCkiLz48cGF0aCBjbGFzcz0iY2xzLTQiIGQ9Ik0xMS42LDQyLjg1YTEuNTIsMS41MiwwLDEsMCwxLjUyLDEuNTJoMGExLjUyLDEuNTIsMCwwLDAtMS41LTEuNTJabS40LDEuNDFhLjQyLjQyLDAsMSwxLC40Mi0uNDJoMGEuNDIuNDIsMCwwLDEtLjQxLjQzaDBaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy00IiBkPSJNMjYuNTUsNDIuODVhMS41MiwxLjUyLDAsMSwwLDEuNTEsMS41M2gwYTEuNTIsMS41MiwwLDAsMC0xLjUxLTEuNTNaTTI3LDQ0LjI2YS40Mi40MiwwLDAsMS0uNDMtLjQxaDBhLjQzLjQzLDAsMCwxLC40MS0uNDMuNDIuNDIsMCwwLDEsLjQzLjQxaDBhLjQxLjQxLDAsMCwxLS40LjQyaDBaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PGVsbGlwc2UgY2xhc3M9ImNscy02IiBjeD0iMTkuMzYiIGN5PSI0NC45NSIgcng9IjE0LjEiIHJ5PSIxMC4xNiIvPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTM2LjQzLDM5LjNWMzIuNThhMi40NiwyLjQ2LDAsMCwwLDEuOTEtMi4yOSwyLjY1LDIuNjUsMCwwLDAtNS4yNywwQTIuNDgsMi40OCwwLDAsMCwzNSwzMi41OHY2LjU1aC0uMmMtMi02Ljk0LTcuOTEtMTEuMjgtMTUuNjMtMTEuMjhTNS41MSwzMi4xNSwzLjU1LDM5LjEzSDIuODhBMi43NiwyLjc2LDAsMCwwLDAsNDEuNzF2NS4xNGEyLjc1LDIuNzUsMCwwLDAsMi44OCwyLjU5aC45MWExMywxMywwLDAsMCwzLjU5LDUuMTFMNi4wOSw1NS43MkEuNzguNzgsMCwwLDAsNiw1Ni44MmwwLDBINmMyLjkzLDMuNTMsNy43Miw1LjYsMTMuMTMsNS42czEwLjIxLTIsMTMuMTQtNS42YS43OS43OSwwLDAsMC0uMDktMS4xMWgwbC0xLjMtMS4xOWExMywxMywwLDAsMCwzLjU5LTUuMDhoMWEyLjc0LDIuNzQsMCwwLDAsMi44Ny0yLjZWNDEuNzFBMi41OCwyLjU4LDAsMCwwLDM2LjQzLDM5LjNabS0xNy4yNi00YzcuMTQsMCwxMi45NCw0LjcsMTIuOTQsMTAuNDcsMCw2LjI1LTYuNTEsOS0xMi45NCw5UzYuMjMsNTIsNi4yMyw0NS43MkM2LjIzLDQwLDEyLDM1LjI1LDE5LjE3LDM1LjI1WiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAwKSIvPjxwYXRoIGNsYXNzPSJjbHMtNyIgZD0iTTM2LjkxLDQ1LjE2SDM1di0xYTE4LjYxLDE4LjYxLDAsMCwwLS4zOS0zLjc5aC44MmExLjM1LDEuMzUsMCwwLDEsMS40NCwxLjI1aDBaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy03IiBkPSJNMzUuNDcsNDguMThoLTFBMTYuMTMsMTYuMTMsMCwwLDAsMzQuODksNDZoMnYuODVhMS4zNCwxLjM0LDAsMCwxLTEuMzYsMS4zMmgtLjA2WiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAwKSIvPjxwYXRoIGNsYXNzPSJjbHMtNyIgZD0iTTE5LjE3LDYxLjFjLTQuNzksMC05LjA2LTEuNzItMTEuNzQtNC43OGwxLjMtMS4yMWExNy44NywxNy44NywwLDAsMCwxMC40LDMsMTcuNzMsMTcuNzMsMCwwLDAsMTAuNC0zbDEuMzUsMS4yMUMyOC4yMyw1OS4zOCwyNCw2MS4xLDE5LjE3LDYxLjFaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy03IiBkPSJNMi44OCw0MC40MmguODVhMTkuMzMsMTkuMzMsMCwwLDAtLjM4LDMuNzksOC4zNCw4LjM0LDAsMCwwLDAsMUgxLjQ5di0zLjVhMS4yNywxLjI3LDAsMCwxLDEuMjQtMS4yOVoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMCkiLz48cGF0aCBkPSJNMTkuMTcsMzQuMzlhMTcuNjYsMTcuNjYsMCwwLDAtNC43OS42OVYyOS44NWExNy4yMywxNy4yMywwLDAsMSw0Ljc5LS42NCwxNy4zLDE3LjMsMCwwLDEsNC44LjY0djUuMjZBMTUuOTEsMTUuOTEsMCwwLDAsMTkuMTcsMzQuMzlaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDApIi8+PHBhdGggY2xhc3M9ImNscy03IiBkPSJNMS40NCw0NmgyYTE3LjU2LDE3LjU2LDAsMCwwLC40MywyLjE2aC0xYTEuMzUsMS4zNSwwLDAsMS0xLjQ0LTEuMjVoMFY0NloiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMCkiLz48ZWxsaXBzZSBjbGFzcz0iY2xzLTciIGN4PSIzNS43MSIgY3k9IjMwLjI5IiByeD0iMS4yIiByeT0iMS4wOCIvPjwvc3ZnPg==
+  mediatype: image/svg+xml
+name: trino-operator
+schema: olm.package
+---
+schema: olm.channel
+package: trino-operator
+name: stable
+entries:
+  - name: trino-operator.v0.0.1
+---
+schema: olm.bundle
+image: quay.io/zncdata/trino-operator-bundle:v0.0.1

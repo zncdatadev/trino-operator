@@ -147,3 +147,7 @@ bundle
 bundle.Dockerfile
 
 kind-kubeconfig*
+
+# catalog
+catalog
+catalog.Dockerfile
