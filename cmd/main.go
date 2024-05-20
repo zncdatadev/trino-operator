@@ -18,7 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -64,6 +67,23 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	watchNamespaces, err := getWatchNamespaces()
+	if err != nil {
+		setupLog.Error(err, "unable to get WatchNamespace, "+
+			"the manager will watch and manage resources in all namespaces")
+	}
+
+	cachedNamespaces := make(map[string]cache.Config)
+
+	if len(watchNamespaces) > 0 {
+		setupLog.Info("watchNamespaces", "namespaces", watchNamespaces)
+		cachedNamespaces = make(map[string]cache.Config)
+		for _, ns := range watchNamespaces {
+			cachedNamespaces[ns] = cache.Config{}
+		}
+	} else {
+		setupLog.Info("watchNamespaces", "namespaces", "all")
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -81,6 +101,7 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		Cache: cache.Options{DefaultNamespaces: cachedNamespaces},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -110,4 +131,31 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// getWatchNamespaces returns the Namespaces the operator should be watching for changes
+func getWatchNamespaces() ([]string, error) {
+	// WatchNamespacesEnvVar is the constant for env variable WATCH_NAMESPACES
+	// which specifies the Namespaces to watch.
+	// An empty value means the operator is running with cluster scope.
+	var watchNamespacesEnvVar = "WATCH_NAMESPACES"
+
+	ns, found := os.LookupEnv(watchNamespacesEnvVar)
+	if !found {
+		return nil, fmt.Errorf("%s must be set", watchNamespacesEnvVar)
+	}
+	return cleanNamespaceList(ns), nil
+}
+
+func cleanNamespaceList(namespaces string) (result []string) {
+	unfilteredList := strings.Split(namespaces, ",")
+	result = make([]string, 0, len(unfilteredList))
+
+	for _, elem := range unfilteredList {
+		elem = strings.TrimSpace(elem)
+		if len(elem) != 0 {
+			result = append(result, elem)
+		}
+	}
+	return
 }
