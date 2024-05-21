@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
-	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"

@@ -1,8 +1,8 @@
 package coordinator
 
 import (
-	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
-	"github.com/zncdata-labs/trino-operator/internal/common"
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/common"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

@@ -3,8 +3,8 @@ package coordinator
 import (
 	"context"
 
-	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
-	"github.com/zncdata-labs/trino-operator/internal/common"
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
