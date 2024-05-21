@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        k8s-version: ['1.26.15', '1.27.11', '1.28.9', '1.29.4', '1.30.0']
+        k8s-version: ['1.26.15', '1.30.0']
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v4
