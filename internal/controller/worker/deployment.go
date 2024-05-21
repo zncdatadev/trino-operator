@@ -5,8 +5,8 @@ import (
 	"maps"
 	"time"
 
-	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
-	"github.com/zncdata-labs/trino-operator/internal/common"
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

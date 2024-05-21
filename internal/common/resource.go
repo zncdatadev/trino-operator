@@ -8,7 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
 )
 
 var log = ctrl.Log.WithName("resourceFetcher")

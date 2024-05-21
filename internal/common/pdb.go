@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 
-	trinov1alpha1 "github.com/zncdata-labs/trino-operator/api/v1alpha1"
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

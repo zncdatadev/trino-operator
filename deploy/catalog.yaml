@@ -9,7 +9,7 @@ spec:
     securityContextConfig: restricted
   image: registry.cn-hangzhou.aliyuncs.com/luwei-dev/trino-operator-catalog:latest
   displayName: trino catalog
-  publisher: zncdata-labs
+  publisher: zncdatadev
   updateStrategy:
     registryPoll:
       interval: 5m

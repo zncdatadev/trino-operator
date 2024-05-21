@@ -1,7 +1,7 @@
 package worker
 
 import (
-	"github.com/zncdata-labs/trino-operator/internal/common"
+	"github.com/zncdatadev/trino-operator/internal/common"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

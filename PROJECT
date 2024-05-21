@@ -9,7 +9,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: trino-operator
-repo: github.com/zncdata-labs/trino-operator
+repo: github.com/zncdatadev/trino-operator
 resources:
 - api:
     crdVersion: v1
@@ -18,6 +18,6 @@ resources:
   domain: zncdata.dev
   group: trino
   kind: TrinoCluster
-  path: github.com/zncdata-labs/trino-operator/api/v1alpha1
+  path: github.com/zncdatadev/trino-operator/api/v1alpha1
   version: v1alpha1
 version: "3"
