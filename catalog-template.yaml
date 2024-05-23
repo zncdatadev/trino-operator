@@ -1,4 +1,3 @@
----
 defaultChannel: stable
 description: |
   # Zncdata Stack Operator for Trino
@@ -47,7 +46,7 @@ description: |
         displayName: zncdata operators
         grpcPodConfig:
           securityContextConfig: restricted
-        image: quay.io/zncdata/catalog:v0.0.1-alpha
+        image: quay.io/zncdatadev/catalog:v0.0.1-alpha
         publisher: zncdata.dev
         sourceType: grpc
         updateStrategy:
@@ -93,7 +92,7 @@ schema: olm.channel
 package: trino-operator
 name: stable
 entries:
-  - name: trino-operator.v0.0.1
+- name: trino-operator.v0.0.1
 ---
 schema: olm.bundle
-image: quay.io/zncdata/trino-operator-bundle:v0.0.1
+image: quay.io/zncdatadev/trino-operator-bundle:v0.0.1

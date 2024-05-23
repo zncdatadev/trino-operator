@@ -44,7 +44,7 @@ working together seamlessly. Based on Kubernetes, it runs everywhere.
       displayName: zncdata operators
       grpcPodConfig:
         securityContextConfig: restricted
-      image: quay.io/zncdata/catalog:v0.0.1-alpha
+      image: quay.io/zncdatadev/catalog:v0.0.1-alpha
       publisher: zncdata.dev
       sourceType: grpc
       updateStrategy:

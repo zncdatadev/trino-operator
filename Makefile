@@ -24,14 +24,14 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
-REGISTRY ?= quay.io/zncdata
+REGISTRY ?= quay.io/zncdatadev
 PROJECT_NAME = trino-operator
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# zncdata.dev/trino-operator-bundle:$VERSION and zncdata.dev/trino-operator-catalog:$VERSION.
+# quay.io/zncdatadev/trino-operator-bundle:$VERSION and quay.io/zncdatadev/trino-operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= $(REGISTRY)/$(PROJECT_NAME)
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
