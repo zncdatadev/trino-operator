@@ -67,6 +67,15 @@ func (d *DeploymentReconciler) Build(ctx context.Context) (client.Object, error)
 	return dep, nil
 }
 
+func (d *DeploymentReconciler) SetAffinity(resource client.Object) {
+	dep := resource.(*appsv1.Deployment)
+	if affinity := d.MergedCfg.Config.Affinity; affinity != nil {
+		dep.Spec.Template.Spec.Affinity = affinity
+	} else {
+		dep.Spec.Template.Spec.Affinity = common.AffinityDefault(common.Coordinator, d.Instance.GetName())
+	}
+}
+
 // CommandOverride implement the WorkloadOverride interface
 func (d *DeploymentReconciler) CommandOverride(resource client.Object) {
 	dep := resource.(*appsv1.Deployment)
