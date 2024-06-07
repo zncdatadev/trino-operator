@@ -124,3 +124,7 @@ func ConvertToResourceRequirements(resources *trinov1alpha1.ResourcesSpec) *core
 		},
 	}
 }
+
+func ImageRepository(name, tag string) string {
+	return fmt.Sprintf("%s:%s", name, tag)
+}

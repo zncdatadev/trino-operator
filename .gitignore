@@ -142,6 +142,9 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+# dev container
+.devcontainer
+
 # olm
 bundle
 bundle.Dockerfile

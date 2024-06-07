@@ -7,6 +7,9 @@ package v1alpha1
 
 type ContainerLoggingSpec struct {
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	EnableVectorAgent bool `json:"enableVectorAgent,omitempty"`
+	// +kubebuilder:validation:Optional
 	Trino *LoggingConfigSpec `json:"TrinoCluster,omitempty"`
 }
 

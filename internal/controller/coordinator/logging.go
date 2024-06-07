@@ -30,14 +30,17 @@ func (c *LogDataBuilder) MakeContainerLogData() map[string]string {
 	data := make(map[string]string)
 	// logger data
 	if logging := cfg.Config.Logging; logging != nil {
-		loggers := logging.Trino.Loggers
-		if len(loggers) > 0 {
-			var lines string
-			for logger, level := range loggers {
-				lines = lines + logger + "=" + level.Level + "\n"
+		if container := logging.Trino; container != nil {
+			loggers := container.Loggers
+			if len(loggers) > 0 {
+				var lines string
+				for logger, level := range loggers {
+					lines = lines + logger + "=" + level.Level + "\n"
+				}
+				data[common.LogCfgName] = lines
 			}
-			data[common.LogCfgName] = lines
 		}
+
 	}
 	return data
 }

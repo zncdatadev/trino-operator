@@ -30,3 +30,7 @@ func getServiceSpec(instance *trinov1alpha1.TrinoCluster) *trinov1alpha1.Service
 	}
 	return spec
 }
+
+func GetRole() common.Role {
+	return common.Worker
+}

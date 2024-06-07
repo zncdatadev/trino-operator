@@ -3,6 +3,7 @@ package coordinator
 import (
 	"context"
 	"fmt"
+	"github.com/zncdatadev/operator-go/pkg/errors"
 	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
 	"github.com/zncdatadev/trino-operator/internal/common"
 	"github.com/zncdatadev/trino-operator/internal/util"
@@ -39,7 +40,7 @@ func NewConfigMap(
 }
 
 // Build implements the ResourceBuilder interface
-func (c *ConfigMapReconciler) Build(_ context.Context) (client.Object, error) {
+func (c *ConfigMapReconciler) Build(ctx context.Context) (client.Object, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      createCoordinatorConfigmapName(c.Instance.GetName(), c.GroupName),
@@ -53,6 +54,14 @@ func (c *ConfigMapReconciler) Build(_ context.Context) (client.Object, error) {
 			trinov1alpha1.LogPropertiesFileName:             *c.makeLogPropertiesData(),
 			trinov1alpha1.ExchangeManagerPropertiesFileName: *c.makeExchangeManagerPropertiesData(),
 		},
+	}
+	if logspec := c.MergedCfg.Config.Logging; logspec != nil && logspec.EnableVectorAgent {
+		if discovery := c.Instance.Spec.ClusterConfig.VectorAggregatorConfigMapName; discovery != "" {
+			cm.Data[trinov1alpha1.VectorYamlName] = *common.MakeVectorYaml(ctx, c.Client,
+				c.Instance.GetNamespace(), c.Instance.GetName(), GetRole(), c.GroupName, discovery)
+		} else {
+			logger.Error(errors.Errorf("vector agent is enabled but discovery config not found"), "discovery config not found")
+		}
 	}
 	return cm, nil
 }
@@ -138,6 +147,11 @@ http-server.http.port=%s
 query.max-memory=%s
 query.max-memory-per-node=%s
 discovery.uri=http://localhost:%s
+log.compression=none
+log.format=json
+log.max-size=5MB
+log.max-total-size=10MB
+log.path=/zncdata/log/trino/server.airlift.json
 `
 
 func (c *ConfigMapReconciler) makeConfigPropertiesData() *string {
