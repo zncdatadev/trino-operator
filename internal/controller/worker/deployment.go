@@ -2,6 +2,9 @@ package worker
 
 import (
 	"context"
+	"github.com/zncdatadev/trino-operator/internal/controller/worker/container"
+	"github.com/zncdatadev/trino-operator/internal/util"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"maps"
 	"time"
 
@@ -73,7 +76,7 @@ func (d *DeploymentReconciler) SetAffinity(resource client.Object) {
 	if affinity := d.MergedCfg.Config.Affinity; affinity != nil {
 		dep.Spec.Template.Spec.Affinity = affinity
 	} else {
-		dep.Spec.Template.Spec.Affinity = common.AffinityDefault(common.Worker, d.Instance.GetName())
+		dep.Spec.Template.Spec.Affinity = common.AffinityDefault(GetRole(), d.Instance.GetName())
 	}
 }
 
@@ -122,7 +125,7 @@ func (d *DeploymentReconciler) getPodTemplate() corev1.PodTemplateSpec {
 
 	maps.Copy(podTemplate.ObjectMeta.Labels, d.MergedLabels)
 
-	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, d.createContainer())
+	podTemplate.Spec.Containers = d.getContainers()
 
 	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, d.createVolumes()...)
 
@@ -131,6 +134,18 @@ func (d *DeploymentReconciler) getPodTemplate() corev1.PodTemplateSpec {
 		podTemplate.Spec.TerminationGracePeriodSeconds = seconds
 	}
 	return podTemplate
+}
+
+func (d *DeploymentReconciler) getContainers() []corev1.Container {
+	resourceSpec := d.MergedCfg.Config.Resources
+	imageSpec := d.getImageSpec()
+	image := util.ImageRepository(imageSpec.Repository, imageSpec.Tag)
+	worker := container.NewWorkerContainerBuilder(image, imageSpec.PullPolicy, resourceSpec)
+	vector := container.VectorBuilder
+	return []corev1.Container{
+		worker.Build(worker),
+		vector.Build(vector),
+	}
 }
 
 func (d *DeploymentReconciler) getTerminationGracePeriodSeconds() *int64 {
@@ -145,7 +160,7 @@ func (d *DeploymentReconciler) getTerminationGracePeriodSeconds() *int64 {
 
 // is loggers override enabled
 func (d *DeploymentReconciler) isLoggersOverrideEnabled() bool {
-	return d.MergedCfg.Config.Logging != nil
+	return d.MergedCfg.Config.Logging != nil && d.MergedCfg.Config.Logging.Trino != nil
 }
 
 func (d *DeploymentReconciler) logVolumesOverride(resource client.Object) {
@@ -155,11 +170,11 @@ func (d *DeploymentReconciler) logVolumesOverride(resource client.Object) {
 		volumes = make([]corev1.Volume, 1)
 	}
 	volumes = append(volumes, corev1.Volume{
-		Name: d.logVolumeName(),
+		Name: d.logConfigVolumeName(),
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: common.CreateRoleGroupLoggingConfigMapName(d.Instance.Name, string(common.Worker),
+					Name: common.CreateRoleGroupLoggingConfigMapName(d.Instance.Name, string(GetRole()),
 						d.GroupName),
 				},
 				Items: []corev1.KeyToPath{
@@ -179,42 +194,10 @@ func (d *DeploymentReconciler) logVolumeMountsOverride(resource client.Object) {
 	containers := dep.Spec.Template.Spec.Containers
 	for i := range containers {
 		containers[i].VolumeMounts = append(containers[i].VolumeMounts, corev1.VolumeMount{
-			Name:      d.logVolumeName(),
+			Name:      d.logConfigVolumeName(),
 			MountPath: "/etc/trino/log.properties",
 			SubPath:   "log.properties",
 		})
-	}
-}
-
-// create container
-func (d *DeploymentReconciler) createContainer() corev1.Container {
-	image := d.getImageSpec()
-	return corev1.Container{
-		Name:            d.Instance.GetNameWithSuffix("worker"),
-		Image:           image.Repository + ":" + image.Tag,
-		ImagePullPolicy: image.PullPolicy,
-		Resources:       d.getResources(),
-		Ports: []corev1.ContainerPort{
-			{
-				ContainerPort: 18080,
-				Name:          "http",
-				Protocol:      "TCP",
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      d.configVolumeName(),
-				MountPath: "/etc/trino",
-			},
-			{
-				Name:      d.catalogVolumeName(),
-				MountPath: "/etc/trino/catalog",
-			},
-			{
-				Name:      d.schemaVolumeName(),
-				MountPath: "/etc/trino/schemas",
-			},
-		},
 	}
 }
 
@@ -222,7 +205,7 @@ func (d *DeploymentReconciler) createContainer() corev1.Container {
 func (d *DeploymentReconciler) createVolumes() []corev1.Volume {
 	return []corev1.Volume{
 		{
-			Name: d.configVolumeName(),
+			Name: common.ConfigVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -232,7 +215,7 @@ func (d *DeploymentReconciler) createVolumes() []corev1.Volume {
 			},
 		},
 		{
-			Name: d.catalogVolumeName(),
+			Name: common.CatalogVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -242,12 +225,23 @@ func (d *DeploymentReconciler) createVolumes() []corev1.Volume {
 			},
 		},
 		{
-			Name: d.schemaVolumeName(),
+			Name: common.SchemaVolumeName(),
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: common.CreateSchemaConfigmapName(d.Instance.GetName()),
 					},
+				},
+			},
+		},
+		{
+			Name: common.LogVolumeName(),
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					SizeLimit: func() *resource.Quantity {
+						r := resource.MustParse("33Mi")
+						return &r
+					}(),
 				},
 			},
 		},
@@ -282,25 +276,7 @@ func (d *DeploymentReconciler) shouldStop(ctx context.Context) bool {
 	return clusterOperation.ClusterStop()
 }
 
-// get resources
-func (d *DeploymentReconciler) getResources() corev1.ResourceRequirements {
-	resourcesSpec := d.MergedCfg.Config.Resources
-	return *common.ConvertToResourceRequirements(resourcesSpec)
-}
-
-func (d *DeploymentReconciler) configVolumeName() string {
-	return "config-volume"
-}
-
-func (d *DeploymentReconciler) catalogVolumeName() string {
-	return "catalog-volume"
-}
-
-func (d *DeploymentReconciler) schemaVolumeName() string {
-	return "schema-volume"
-}
-
 // create log4j2 volume name
-func (d *DeploymentReconciler) logVolumeName() string {
-	return "log-volume"
+func (d *DeploymentReconciler) logConfigVolumeName() string {
+	return "log-config"
 }

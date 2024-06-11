@@ -31,6 +31,7 @@ const (
 	ConfigPropertiesFileName          = "config.properties"
 	LogPropertiesFileName             = "log.properties"
 	ExchangeManagerPropertiesFileName = "exchange-manager.properties"
+	VectorYamlName                    = "vector.yaml"
 )
 
 const (
@@ -100,6 +101,8 @@ type ClusterOperationSpec struct {
 }
 
 type ClusterConfigSpec struct {
+	// +kubebuilder:validation:Optional
+	VectorAggregatorConfigMapName string `json:"vectorAggregatorConfigMapName,omitempty"`
 	// +kubebuilder:validation:Optional
 	Service *ServiceSpec `json:"service,omitempty"`
 

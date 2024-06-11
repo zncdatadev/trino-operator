@@ -102,6 +102,8 @@ spec:
                           for a service
                         type: string
                     type: object
+                  vectorAggregatorConfigMapName:
+                    type: string
                 required:
                 - clusterMode
                 type: object
@@ -1167,6 +1169,9 @@ spec:
                                   type: object
                                 type: object
                             type: object
+                          enableVectorAgent:
+                            default: false
+                            type: boolean
                         type: object
                       nodeProperties:
                         properties:
@@ -2370,6 +2375,9 @@ spec:
                                         type: object
                                       type: object
                                   type: object
+                                enableVectorAgent:
+                                  default: false
+                                  type: boolean
                               type: object
                             nodeProperties:
                               properties:
@@ -11754,6 +11762,9 @@ spec:
                                   type: object
                                 type: object
                             type: object
+                          enableVectorAgent:
+                            default: false
+                            type: boolean
                         type: object
                       nodeProperties:
                         properties:
@@ -20986,6 +20997,9 @@ spec:
                                         type: object
                                       type: object
                                   type: object
+                                enableVectorAgent:
+                                  default: false
+                                  type: boolean
                               type: object
                             nodeProperties:
                               properties:
