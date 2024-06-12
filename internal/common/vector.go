@@ -55,6 +55,10 @@ func (v VectorContainerBuilder) VolumeMount() []corev1.VolumeMount {
 func (v VectorContainerBuilder) CommandArgs() []string {
 	return []string{
 		`log_dir="/zncdata/log/_vector"
+data_dir="/zncdata/vector/var"
+if [ ! -d "$data_dir" ]; then
+  mkdir -p "$data_dir"
+fi
 
 vector --config /zncdata/config/vector.yaml &
 vector_pid=$!
@@ -89,7 +93,6 @@ done
 func (v VectorContainerBuilder) Command() []string {
 	return []string{
 		"ash",
-		"-x",
 		"-euo",
 		"pipefail",
 		"-c",
@@ -141,23 +144,23 @@ transforms:
       - processed_files_*
     type: remap
     source: |
-      . |= parse_regex!(.file, r'^/stackable/log/(?P<container>.*?)/(?P<file>.*?)$')
+      . |= parse_regex!(.file, r'^/zncdata/log/(?P<container>.*?)/(?P<file>.*?)$')
       del(.source_type)
   extended_logs:
     inputs:
       - extended_logs_*
     type: remap
     source: |
-      .namespace = {{.Namespace}}
-      .cluster = {{.Cluster}}
-      .role = {{.Role}}
-      .roleGroup = {{.GroupName}}
+      .namespace = "{{.Namespace}}"
+      .cluster = "{{.Cluster}}"
+      .role = "{{.Role}}"
+      .roleGroup = "{{.GroupName}}"
 sinks:
   aggregator:
     inputs:
       - extended_logs
     type: vector
-    address: {{.VectorAggregatorAddress}}
+    address: "{{.VectorAggregatorAddress}}"
 `
 	parser := util.TemplateParser{
 		Value:    data,
