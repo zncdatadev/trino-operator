@@ -3,6 +3,7 @@ package coordinator
 import (
 	"context"
 	"fmt"
+	"github.com/zncdatadev/operator-go/pkg/builder"
 	"github.com/zncdatadev/operator-go/pkg/errors"
 	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
 	"github.com/zncdatadev/trino-operator/internal/common"
@@ -55,10 +56,14 @@ func (c *ConfigMapReconciler) Build(ctx context.Context) (client.Object, error) 
 			trinov1alpha1.ExchangeManagerPropertiesFileName: *c.makeExchangeManagerPropertiesData(),
 		},
 	}
-	if logspec := c.MergedCfg.Config.Logging; logspec != nil && logspec.EnableVectorAgent {
+	if common.IsVectorEnabled(c.MergedCfg.Config.Logging) {
 		if discovery := c.Instance.Spec.ClusterConfig.VectorAggregatorConfigMapName; discovery != "" {
-			cm.Data[trinov1alpha1.VectorYamlName] = *common.MakeVectorYaml(ctx, c.Client,
-				c.Instance.GetNamespace(), c.Instance.GetName(), GetRole(), c.GroupName, discovery)
+			if vectorYaml, err := builder.MakeVectorYaml(ctx, c.Client,
+				c.Instance.GetNamespace(), c.Instance.GetName(), string(GetRole()), c.GroupName, discovery); err != nil {
+				return nil, err
+			} else {
+				cm.Data[trinov1alpha1.VectorYamlName] = vectorYaml
+			}
 		} else {
 			logger.Error(errors.Errorf("vector agent is enabled but discovery config not found"), "discovery config not found")
 		}
