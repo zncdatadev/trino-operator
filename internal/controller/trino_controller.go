@@ -23,7 +23,6 @@ import (
 	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
 	"github.com/zncdatadev/trino-operator/internal/common"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -80,10 +79,12 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	result, err := NewClusterReconciler(r.Client, r.Scheme, trino).ReconcileCluster(ctx)
 	if err != nil {
 		return ctrl.Result{}, err
+	} else if result.RequeueAfter > 0 {
+		return result, nil
 	}
+	r.Log.Info("Reconcile successfully ", "Name", trino.Name)
+	return ctrl.Result{}, nil
 
-	r.Log.Info("Successfully reconciled TrinoCluster")
-	return result, nil
 }
 
 func (r *TrinoReconciler) ReconciliationPaused(
@@ -99,23 +100,6 @@ func (r *TrinoReconciler) ReconciliationPaused(
 		},
 	)
 	return clusterOperation.ReconciliationPaused()
-}
-
-// UpdateStatus updates the status of the TrinoCluster resource
-// https://stackoverflow.com/questions/76388004/k8s-controller-update-status-and-condition
-func (r *TrinoReconciler) UpdateStatus(ctx context.Context, instance *trinov1alpha1.TrinoCluster) error {
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		return r.Status().Update(ctx, instance)
-		//return r.Status().Patch(ctx, instance, client.MergeFrom(instance))
-	})
-
-	if retryErr != nil {
-		r.Log.Error(retryErr, "Failed to update vfm status after retries")
-		return retryErr
-	}
-
-	r.Log.V(1).Info("Successfully patched object status")
-	return nil
 }
 
 func (r *TrinoReconciler) SetupWithManager(mgr ctrl.Manager) error {

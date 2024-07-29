@@ -14,6 +14,7 @@ spec:
     tag: "423"
     pullPolicy: IfNotPresent
   clusterConfig:
+    vectorAggregatorConfigMapName: vector-aggregator-discovery
     service:
       port: 18080
       type: ClusterIP
@@ -22,7 +23,7 @@ spec:
       annotations:
         kubernetes.io/ingress.class: traefik
         nginx.ingress.kubernetes.io/rewrite-target: /
-      host: trino-sample.example.com
+      host: trino-vector.example.com
     clusterMode: true
   coordinator:
     config:
@@ -45,6 +46,8 @@ spec:
       default:
         replicas: 1
         config:
+          logging:
+            enableVectorAgent: true
           resources:
             cpu:
               min: "1"
@@ -70,5 +73,7 @@ spec:
       default:
         replicas: 1
         config:
+          logging:
+            enableVectorAgent: true
           nodeSelector:
             app: default-worker

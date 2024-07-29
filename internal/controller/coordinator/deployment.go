@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"context"
-	"github.com/zncdatadev/trino-operator/internal/controller/coordinator/container"
 	"github.com/zncdatadev/trino-operator/internal/util"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"maps"
@@ -67,6 +66,7 @@ func (d *DeploymentReconciler) Build(ctx context.Context) (client.Object, error)
 			Template: podTemplate,
 		},
 	}
+	coordinatorWithVector(d.MergedCfg.Config.Logging, dep, createCoordinatorConfigmapName(d.Instance.Name, d.GroupName))
 	return dep, nil
 }
 
@@ -139,11 +139,9 @@ func (d *DeploymentReconciler) getContainers() []corev1.Container {
 	resourceSpec := d.MergedCfg.Config.Resources
 	imageSpec := d.getImageSpec()
 	image := util.ImageRepository(imageSpec.Repository, imageSpec.Tag)
-	coordinator := container.NewCoordinatorContainerBuilder(image, imageSpec.PullPolicy, resourceSpec)
-	vector := container.VectorBuilder
+	coordinator := NewCoordinatorContainerBuilder(image, imageSpec.PullPolicy, resourceSpec)
 	return []corev1.Container{
 		coordinator.Build(coordinator),
-		vector.Build(vector),
 	}
 }
 

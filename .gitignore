@@ -154,3 +154,6 @@ kind-kubeconfig*
 # catalog
 catalog
 catalog.Dockerfile
+
+# test
+*-local.yaml

@@ -21,17 +21,17 @@ metadata:
   name: trinocluster-sample-default
 spec:
   rules:
-  - host: trino-sample.example.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: trinocluster-sample-default-coordinator
-            port:
-              number: 18080
-        path: /
-        pathType: Prefix
+    - host: trino-vector.example.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: trinocluster-sample-default-coordinator
+                port:
+                  number: 18080
+            path: /
+            pathType: Prefix
 status:
   loadBalancer:
     ingress:
-    - hostname: localhost
+      - hostname: localhost

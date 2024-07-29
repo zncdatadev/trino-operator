@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"github.com/zncdatadev/trino-operator/internal/controller/worker/container"
 	"github.com/zncdatadev/trino-operator/internal/util"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"maps"
@@ -68,6 +67,7 @@ func (d *DeploymentReconciler) Build(ctx context.Context) (client.Object, error)
 			Template: podTemplate,
 		},
 	}
+	workerWithVector(d.MergedCfg.Config.Logging, dep, createWorkerConfigmapName(d.Instance.Name, d.GroupName))
 	return dep, nil
 }
 
@@ -140,11 +140,9 @@ func (d *DeploymentReconciler) getContainers() []corev1.Container {
 	resourceSpec := d.MergedCfg.Config.Resources
 	imageSpec := d.getImageSpec()
 	image := util.ImageRepository(imageSpec.Repository, imageSpec.Tag)
-	worker := container.NewWorkerContainerBuilder(image, imageSpec.PullPolicy, resourceSpec)
-	vector := container.VectorBuilder
+	worker := NewWorkerContainerBuilder(image, imageSpec.PullPolicy, resourceSpec)
 	return []corev1.Container{
 		worker.Build(worker),
-		vector.Build(vector),
 	}
 }
 
