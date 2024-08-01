@@ -49,8 +49,6 @@ const (
 	ExchangeManagerBaseDir = "/tmp/TrinoCluster-local-file-system-exchange-manager"
 )
 
-const ()
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
