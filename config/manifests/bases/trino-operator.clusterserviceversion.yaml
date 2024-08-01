@@ -11,6 +11,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: TrinoCatalog is the Schema for the trinocatalogs API
+      displayName: Trino Catalog
+      kind: TrinoCatalog
+      name: trinocatalogs.trino.zncdata.dev
+      version: v1alpha1
     - description: TrinoCluster is the Schema for the trinoclusters API
       displayName: Trino Cluster
       kind: TrinoCluster

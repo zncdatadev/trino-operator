@@ -1,0 +1,12 @@
+apiVersion: trino.zncdata.dev/v1alpha1
+kind: TrinoCatalog
+metadata:
+  labels:
+    app.kubernetes.io/name: trinocatalog
+    app.kubernetes.io/instance: trinocatalog-sample
+    app.kubernetes.io/part-of: trino-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: trino-operator
+  name: trinocatalog-sample
+spec:
+  # TODO(user): Add fields here
