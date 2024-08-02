@@ -75,6 +75,18 @@ rules:
 - apiGroups:
   - trino.zncdata.dev
   resources:
+  - trinocatalogs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - trino.zncdata.dev
+  resources:
   - trinoclusters
   verbs:
   - create

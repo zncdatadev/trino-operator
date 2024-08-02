@@ -35,7 +35,6 @@ kind: StatefulSet
 metadata:
   name: vector-aggregator
 status:
-  availableReplicas: 1
   replicas: 1
 ---
 apiVersion: v1

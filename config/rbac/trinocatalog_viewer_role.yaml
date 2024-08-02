@@ -1,0 +1,27 @@
+# permissions for end users to view trinocatalogs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: trinocatalog-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: trino-operator
+    app.kubernetes.io/part-of: trino-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: trinocatalog-viewer-role
+rules:
+- apiGroups:
+  - trino.zncdata.dev
+  resources:
+  - trinocatalogs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - trino.zncdata.dev
+  resources:
+  - trinocatalogs/status
+  verbs:
+  - get
