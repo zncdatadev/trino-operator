@@ -17,39 +17,18 @@ limitations under the License.
 package v1alpha1
 
 import (
+	commonsv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/commons/v1alpha1"
 	"github.com/zncdatadev/operator-go/pkg/status"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 const (
-	NodePropertiesFileName            = "node.properties"
-	JvmConfigFileName                 = "jvm.config"
-	ConfigPropertiesFileName          = "config.properties"
-	LogPropertiesFileName             = "log.properties"
-	ExchangeManagerPropertiesFileName = "exchange-manager.properties"
-	VectorYamlName                    = "vector.yaml"
+	DefaultRepository      = "quay.io/zncdatadev"
+	DefaultProductVersion  = "451"
+	DefaultKubedoopVersion = "0.0.0-dev"
+	DefaultProductName     = "trino"
 )
-
-const (
-	// resource
-	CpuMin      = "1"
-	CpuMax      = "1.5"
-	MemoryLimit = "1.5Gi"
-
-	//service
-	ServiceType = "ClusterIP"
-	ServicePort = 18080
-
-	//exchange manager
-	ExchangeManagerName    = "filesystem"
-	ExchangeManagerBaseDir = "/tmp/TrinoCluster-local-file-system-exchange-manager"
-)
-
-const ()
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -74,50 +53,69 @@ type TrinoClusterList struct {
 
 // TrinoSpec defines the desired state of TrinoCluster
 type TrinoSpec struct {
-	// +kubebuilder:validation:Required
-	Image *ImageSpec `json:"image"`
-
-	// +kubebuilder:validation:Required
-	Coordinator *CoordinatorSpec `json:"coordinator"`
-
-	// +kubebuilder:validation:Required
-	Worker *WorkerSpec `json:"worker"`
 
 	// +kubebuilder:validation:Optional
 	ClusterConfig *ClusterConfigSpec `json:"clusterConfig,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	ClusterOperation *ClusterOperationSpec `json:"clusterOperation,omitempty"`
-}
+	ClusterOperation *commonsv1alpha1.ClusterOperationSpec `json:"clusterOperation,omitempty"`
 
-type ClusterOperationSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=false
-	ReconciliationPaused bool `json:"reconciliationPaused,omitempty"`
+	// +kubebuilder:validation:Required
+	Image *ImageSpec `json:"image"`
 
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=false
-	Stopped bool `json:"stopped,omitempty"`
+	// +kubebuilder:validation:Required
+	Coordinators *CoordinatorsSpec `json:"coordinators"`
+
+	// +kubebuilder:validation:Required
+	Workers *WorkersSpec `json:"workers"`
 }
 
 type ClusterConfigSpec struct {
+
+	// +kubebuilder:validation:Optional
+	Authentication []AuthenticationSpec `json:"authentication,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	CatalogLabelSelector *CatalogLabelSelectorSpec `json:"catalogLabelSelector,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	ListenerClass string `json:"listenerClass,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	Tls *TlsSpec `json:"tls,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	VectorAggregatorConfigMapName string `json:"vectorAggregatorConfigMapName,omitempty"`
-	// +kubebuilder:validation:Optional
-	Service *ServiceSpec `json:"service,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Ingress *IngressSpec `json:"ingress,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Catalogs map[string]string `json:"catalogs,omitempty"`
-
-	// +kubebuilder:validation:Required
-	// +kubebuilder:default:=true
-	ClusterMode bool `json:"clusterMode"`
 }
 
-type CoordinatorSpec struct {
+type AuthenticationSpec struct {
+	// +kubebuilder:validation:Required
+	AuthenticationClass string    `json:"authenticationClass"`
+	Oidc                *OidcSpec `json:"oidc,omitempty"`
+}
+
+type OidcSpec struct {
+	// +kubebuilder:validation:Required
+	ClientCredentialsSecret string `json:"clientCredentialsSecret"`
+	// +kubebuilder:validation:Optional
+	ExtraScopes []string `json:"extraScopes,omitempty"`
+}
+
+type CatalogLabelSelectorSpec struct {
+	// +kubebuilder:validation:Optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+	// +kubebuilder:validation:Optional
+	MatchExpressions []metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty"`
+}
+
+type TlsSpec struct {
+	// +kubebuilder:validation:Optional
+	InternalSecretClass string `json:"internalSecretClass,omitempty"`
+	// +kubebuilder:validation:Optional
+	ServerSecretClass string `json:"serverSecretClass,omitempty"`
+}
+
+type CoordinatorsSpec struct {
 	// +kubebuilder:validation:Optional
 	Config *ConfigSpec `json:"config,omitempty"`
 
@@ -140,7 +138,7 @@ type CoordinatorSpec struct {
 	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
 }
 
-type WorkerSpec struct {
+type WorkersSpec struct {
 	// +kubebuilder:validation:Optional
 	Config *ConfigSpec `json:"config,omitempty"`
 
@@ -158,7 +156,7 @@ type WorkerSpec struct {
 	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
+	// PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
 }
 
 type RoleGroupSpec struct {
@@ -178,21 +176,15 @@ type RoleGroupSpec struct {
 	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
+	// PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
 }
 
 type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
-	Resources *ResourcesSpec `json:"resources,omitempty"`
+	Resources *commonsv1alpha1.ResourcesSpec `json:"resources,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
-
-	// +kubebuilder:validation:Optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Tolerations []corev1.Toleration `json:"tolerations"`
 
 	// +kubebuilder:validation:Optional
 	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
@@ -202,19 +194,21 @@ type ConfigSpec struct {
 	GracefulShutdownTimeout *string `json:"gracefulShutdownTimeout,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	NodeProperties *NodePropertiesSpec `json:"nodeProperties,omitempty"`
+	Logging *LoggingSpec `json:"logging,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	ConfigProperties *ConfigPropertiesSpec `json:"configProperties,omitempty"`
+	QueryMaxMemory string `json:"queryMaxMemory,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	JvmProperties *JvmPropertiesRoleConfigSpec `json:"jvmProperties,omitempty"`
+	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode,omitempty"`
+}
+
+type LoggingSpec struct {
+	// +kubebuilder:validation:Optional
+	Containers map[string]commonsv1alpha1.LoggingConfigSpec `json:"containers,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	ExchangeManager *ExchangeManagerSpec `json:"exchangeManager,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Logging *ContainerLoggingSpec `json:"logging,omitempty"`
+	EnableVectorAgent bool `json:"enableVectorAgent,omitempty"`
 }
 
 type ConfigOverridesSpec struct {
@@ -235,96 +229,27 @@ type PodDisruptionBudgetSpec struct {
 
 type ImageSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=trinodb/TrinoCluster
-	Repository string `json:"repository,omitempty"`
+	Custom string `json:"custom,omitempty"`
+
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="423"
-	Tag string `json:"tag,omitempty"`
+	// +kubebuilder:default=quay.io/zncdatadev
+	Repository string `json:"repository,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="0.0.0-dev"
+	KubedoopVersion string `json:"kubedoopVersion,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="451"
+	ProductVersion string `json:"productVersion,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=IfNotPresent
 	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
-}
-
-type ServiceSpec struct {
-	// +kubebuilder:validation:Optional
-	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:enum=ClusterIP;NodePort;LoadBalancer;ExternalName
-	// +kubebuilder:default=ClusterIP
-	Type corev1.ServiceType `json:"type,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:default=18080
-	Port int32 `json:"port,omitempty"`
-}
-
-type IngressSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=true
-	Enabled bool `json:"enabled,omitempty"`
-	// +kubebuilder:validation:Optional
-	TLS *networkingv1.IngressTLS `json:"tls,omitempty"`
-	// +kubebuilder:validation:Optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="TrinoCluster.example.com"
-	Host string `json:"host,omitempty"`
-}
-
-type ExchangeManagerSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="filesystem"
-	Name string `json:"name,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/tmp/TrinoCluster-local-file-system-exchange-manager"
-	BaseDir string `json:"baseDir,omitempty"`
-}
-
-type NodePropertiesSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="production"
-	Environment string `json:"environment,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=/data/TrinoCluster
-	DataDir string `json:"dataDir,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=/usr/lib/TrinoCluster/plugin
-	PluginDir string `json:"pluginDir,omitempty"`
-}
-
-type ConfigPropertiesSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/etc/TrinoCluster"
-	Path string `json:"path,omitempty"`
-	// +kubebuilder:validation:Optional
-	Https *HttpsSpec `json:"https,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="4GB"
-	QueryMaxMemory string `json:"queryMaxMemory,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	AuthenticationType string `json:"authenticationType,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	MemoryHeapHeadroomPerNode string `json:"memoryHeapHeadroomPerNode,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="1GB"
-	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode,omitempty"`
-}
-
-type HttpsSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=false
-	Enabled bool `json:"enabled,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=8443
-	Port int `json:"port,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=""
-	KeystorePath string `json:"keystorePath,omitempty"`
+	// +kubebuilder:default="trino"
+	PullSecretName string `json:"pullSecretName,omitempty"`
 }
 
 type JvmPropertiesRoleConfigSpec struct {
@@ -339,22 +264,6 @@ type JvmPropertiesRoleConfigSpec struct {
 	G1HeapRegionSize string `json:"gcHeapRegionSize,omitempty"`
 }
 
-// SetStatusCondition updates the status condition using the provided arguments.
-// If the condition already exists, it updates the condition; otherwise, it appends the condition.
-// If the condition status has changed, it updates the condition's LastTransitionTime.
-func (r *TrinoCluster) SetStatusCondition(condition metav1.Condition) {
-	r.Status.SetStatusCondition(condition)
-}
-
-// InitStatusConditions initializes the status conditions to the provided conditions.
-func (r *TrinoCluster) InitStatusConditions() {
-	r.Status.InitStatus(r)
-	r.Status.InitStatusConditions()
-}
-
 func init() {
 	SchemeBuilder.Register(&TrinoCluster{}, &TrinoClusterList{})
-}
-func (r *TrinoCluster) GetNameWithSuffix(suffix string) string {
-	return r.GetName() + "-" + suffix
 }
