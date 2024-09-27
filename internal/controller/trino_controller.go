@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-logr/logr"
 	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
-	"github.com/zncdatadev/trino-operator/internal/common"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,36 +70,8 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	r.Log.Info("TrinoCluster found", "Name", trino.Name)
 
-	if r.ReconciliationPaused(ctx, trino) {
-		r.Log.Info("Reconciliation is paused")
-		return ctrl.Result{}, nil
-	}
-
-	// reconcile order by "cluster -> role -> role-group -> resource"
-	result, err := NewClusterReconciler(r.Client, r.Scheme, trino).ReconcileCluster(ctx)
-	if err != nil {
-		return ctrl.Result{}, err
-	} else if result.RequeueAfter > 0 {
-		return result, nil
-	}
-	r.Log.Info("Reconcile successfully ", "Name", trino.Name)
 	return ctrl.Result{}, nil
 
-}
-
-func (r *TrinoReconciler) ReconciliationPaused(
-	ctx context.Context,
-	instance *trinov1alpha1.TrinoCluster,
-) bool {
-	clusterOperation := common.NewClusterOperation(
-		&common.TrinoInstance{Instance: instance},
-		common.ResourceClient{
-			Ctx:       ctx,
-			Client:    r.Client,
-			Namespace: instance.Namespace,
-		},
-	)
-	return clusterOperation.ReconciliationPaused()
 }
 
 func (r *TrinoReconciler) SetupWithManager(mgr ctrl.Manager) error {
