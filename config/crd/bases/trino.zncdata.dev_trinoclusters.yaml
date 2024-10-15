@@ -1243,6 +1243,10 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  replicas:
+                    default: 1
+                    format: int32
+                    type: integer
                   roleGroups:
                     additionalProperties:
                       properties:
@@ -2375,6 +2379,8 @@ spec:
                           type: integer
                       type: object
                     type: object
+                required:
+                - roleGroups
                 type: object
               image:
                 properties:
@@ -3521,6 +3527,10 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  replicas:
+                    default: 1
+                    format: int32
+                    type: integer
                   roleGroups:
                     additionalProperties:
                       properties:
@@ -4653,10 +4663,11 @@ spec:
                           type: integer
                       type: object
                     type: object
+                required:
+                - roleGroups
                 type: object
             required:
             - coordinators
-            - image
             - workers
             type: object
           status:

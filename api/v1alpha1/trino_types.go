@@ -38,8 +38,8 @@ type TrinoCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TrinoSpec     `json:"spec,omitempty"`
-	Status status.Status `json:"status,omitempty"`
+	Spec   TrinoClusterSpec `json:"spec,omitempty"`
+	Status status.Status    `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -52,7 +52,7 @@ type TrinoClusterList struct {
 }
 
 // TrinoSpec defines the desired state of TrinoCluster
-type TrinoSpec struct {
+type TrinoClusterSpec struct {
 
 	// +kubebuilder:validation:Optional
 	ClusterConfig *ClusterConfigSpec `json:"clusterConfig,omitempty"`
@@ -60,8 +60,8 @@ type TrinoSpec struct {
 	// +kubebuilder:validation:Optional
 	ClusterOperation *commonsv1alpha1.ClusterOperationSpec `json:"clusterOperation,omitempty"`
 
-	// +kubebuilder:validation:Required
-	Image *ImageSpec `json:"image"`
+	// +kubebuilder:validation:Optional
+	Image *ImageSpec `json:"image,omitempty"`
 
 	// +kubebuilder:validation:Required
 	Coordinators *CoordinatorsSpec `json:"coordinators"`
@@ -115,54 +115,48 @@ type TlsSpec struct {
 	ServerSecretClass string `json:"serverSecretClass,omitempty"`
 }
 
-type CoordinatorsSpec struct {
+type BaseRoleSpec struct {
 	// +kubebuilder:validation:Optional
-	Config *ConfigSpec `json:"config,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	RoleGroups map[string]*RoleGroupSpec `json:"roleGroups,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	// +kubebuilder:default:=1
+	Replicas *int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
 	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
+
+	// // +kubebuilder:validation:Optional
+	// PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
+	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 
-	//// +kubebuilder:validation:Optional
-	//PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
+	// +kubebuilder:validation:Optional
+	Config *ConfigSpec `json:"config,omitempty"`
+}
+
+type CoordinatorsSpec struct {
+	// +kubebuilder:validation:Required
+	RoleGroups map[string]*RoleGroupSpec `json:"roleGroups"`
+
+	BaseRoleSpec `json:",inline"`
 }
 
 type WorkersSpec struct {
-	// +kubebuilder:validation:Optional
-	Config *ConfigSpec `json:"config,omitempty"`
+	// +kubebuilder:validation:Required
+	RoleGroups map[string]*RoleGroupSpec `json:"roleGroups"`
 
-	RoleGroups map[string]*RoleGroupSpec `json:"roleGroups,omitempty"`
-
-	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
+	BaseRoleSpec `json:",inline"`
 }
 
 type RoleGroupSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=1
-	Replicas int32 `json:"replicas,omitempty"`
+	Replicas *int32 `json:"replicas,omitempty"`
 
 	Config *ConfigSpec `json:"config,omitempty"`
 

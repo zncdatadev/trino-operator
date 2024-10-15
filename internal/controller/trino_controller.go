@@ -20,15 +20,20 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/operator-go/pkg/client"
+	"github.com/zncdatadev/operator-go/pkg/reconciler"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/controller/cluster"
 )
 
 // TrinoReconciler reconciles a TrinoCluster object
 type TrinoReconciler struct {
-	client.Client
+	ctrlclient.Client
 	Scheme *runtime.Scheme
 	Log    logr.Logger
 }
@@ -37,12 +42,9 @@ type TrinoReconciler struct {
 // +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -57,10 +59,10 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	r.Log.Info("Reconciling instance")
 
-	trino := &trinov1alpha1.TrinoCluster{}
+	instance := &trinov1alpha1.TrinoCluster{}
 
-	if err := r.Get(ctx, req.NamespacedName, trino); err != nil {
-		if client.IgnoreNotFound(err) != nil {
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+		if ctrlclient.IgnoreNotFound(err) != nil {
 			r.Log.Error(err, "unable to fetch TrinoCluster")
 			return ctrl.Result{}, err
 		}
@@ -68,10 +70,29 @@ func (r *TrinoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 
-	r.Log.Info("TrinoCluster found", "Name", trino.Name)
+	r.Log.Info("TrinoCluster found", "Name", instance.Name)
 
-	return ctrl.Result{}, nil
+	resourceClient := &client.Client{Client: r.Client, OwnerReference: instance}
+	gvk := instance.GetObjectKind().GroupVersionKind()
 
+	clusterReconcoler := cluster.NewClusterReconciler(
+		resourceClient,
+		reconciler.ClusterInfo{
+			GVK: &metav1.GroupVersionKind{
+				Group:   gvk.Group,
+				Version: gvk.Version,
+				Kind:    gvk.Kind,
+			},
+			ClusterName: instance.Name,
+		},
+		&instance.Spec,
+	)
+
+	if err := clusterReconcoler.RegisterResources(ctx); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return clusterReconcoler.Run(ctx)
 }
 
 func (r *TrinoReconciler) SetupWithManager(mgr ctrl.Manager) error {

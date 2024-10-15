@@ -1,37 +1,21 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: trinocluster-sample-default-coordinator
+  name: trino-coordinator-default
+status:
+  availableReplicas: 1
+  currentReplicas: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: trinocluster-sample-default-worker
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: trinocluster-sample-default-coordinator
-spec:
-  type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: trinocluster-sample-default
-spec:
-  rules:
-  - host: trino-sample.example.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: trinocluster-sample-default-coordinator
-            port:
-              number: 18080
-        path: /
-        pathType: Prefix
+  name: trino-worker-default
 status:
-  loadBalancer:
-    ingress:
-    - hostname: localhost
+  availableReplicas: 1
+  currentReplicas: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
