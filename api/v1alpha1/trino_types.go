@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	commonsv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/commons/v1alpha1"
+	"github.com/zncdatadev/operator-go/pkg/constants"
 	"github.com/zncdatadev/operator-go/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +29,21 @@ const (
 	DefaultProductVersion  = "451"
 	DefaultKubedoopVersion = "0.0.0-dev"
 	DefaultProductName     = "trino"
+)
+
+const (
+	TrinoCoordinatorRoleName       = "coordinator"
+	TrinoWorkerRoleName            = "worker"
+	HttpPortName                   = "http"
+	HttpPort                 int32 = 8080
+	HttpsPortName                  = "https"
+	HttpsPort                int32 = 8443
+)
+
+const (
+	DefaultTlsSecretClass = "tls"
+	DefaultListenerClass  = constants.ClusterInternal
+	DefaultQueryMaxMemory = "50GB"
 )
 
 //+kubebuilder:object:root=true
@@ -79,7 +95,8 @@ type ClusterConfigSpec struct {
 	CatalogLabelSelector *CatalogLabelSelectorSpec `json:"catalogLabelSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	ListenerClass string `json:"listenerClass,omitempty"`
+	// +kubebuilder:default:="cluster-internal"
+	ListenerClass constants.ListenerClass `json:"listenerClass,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	Tls *TlsSpec `json:"tls,omitempty"`
@@ -110,9 +127,12 @@ type CatalogLabelSelectorSpec struct {
 
 type TlsSpec struct {
 	// +kubebuilder:validation:Optional
-	InternalSecretClass string `json:"internalSecretClass,omitempty"`
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="tls"
 	ServerSecretClass string `json:"serverSecretClass,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="tls"
+	InternalSecretClass string `json:"internalSecretClass,omitempty"`
 }
 
 type BaseRoleSpec struct {
@@ -191,6 +211,7 @@ type ConfigSpec struct {
 	Logging *LoggingSpec `json:"logging,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="50GB"
 	QueryMaxMemory string `json:"queryMaxMemory,omitempty"`
 
 	// +kubebuilder:validation:Optional

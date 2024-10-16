@@ -4,12 +4,14 @@ import (
 	"context"
 	"strings"
 
+	"github.com/zncdatadev/operator-go/pkg/builder"
 	"github.com/zncdatadev/operator-go/pkg/client"
 	"github.com/zncdatadev/operator-go/pkg/reconciler"
 	"github.com/zncdatadev/operator-go/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 
 	trinov1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/controller/common"
 	"github.com/zncdatadev/trino-operator/internal/controller/coordinator"
 	"github.com/zncdatadev/trino-operator/internal/controller/worker"
 )
@@ -66,14 +68,21 @@ func (r *Reconciler) getCoordinatorSvcFqdn() string {
 }
 
 func (r *Reconciler) RegisterResources(ctx context.Context) error {
+	listenerClass := trinov1alpha1.DefaultListenerClass
+	var enabledTls bool
+	containerPort := corev1.ContainerPort{Name: "http", ContainerPort: trinov1alpha1.HttpPort}
+	if r.ClusterConfig != nil {
+		listenerClass = r.ClusterConfig.ListenerClass
+		enabledTls = r.ClusterConfig.Tls != nil
+	}
 
 	coordinatorSvcFqdn := r.getCoordinatorSvcFqdn()
-
+	coordinatorRoleInfo := reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "coordinator"}
 	coordinatorReconciler := coordinator.NewWorkerReconciler(
 		r.Client,
 		r.IsStopped(),
 		r.ClusterConfig,
-		reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "coordinator"},
+		coordinatorRoleInfo,
 		r.GetImage(),
 		coordinatorSvcFqdn,
 		r.Spec.Coordinators,
@@ -97,6 +106,29 @@ func (r *Reconciler) RegisterResources(ctx context.Context) error {
 	}
 	r.AddResource(workerReconciler)
 
-	return nil
+	if enabledTls {
+		secretReconciler := common.NewInternalsharedSecretReconciler(
+			r.Client,
+			r.ClusterInfo,
+		)
+		r.AddResource(secretReconciler)
 
+		containerPort = corev1.ContainerPort{Name: "https", ContainerPort: trinov1alpha1.HttpsPort}
+	}
+
+	serviceReconciler := reconciler.NewServiceReconciler(
+		r.Client,
+		coordinatorRoleInfo.GetFullName(),
+		[]corev1.ContainerPort{containerPort},
+		func(sbo *builder.ServiceBuilderOption) {
+			sbo.Labels = coordinatorRoleInfo.GetLabels()
+			sbo.Annotations = coordinatorRoleInfo.GetAnnotations()
+			sbo.ClusterName = coordinatorRoleInfo.GetClusterName()
+			sbo.RoleName = coordinatorRoleInfo.GetRoleName()
+			sbo.ListenerClass = listenerClass
+		},
+	)
+	r.AddResource(serviceReconciler)
+
+	return nil
 }

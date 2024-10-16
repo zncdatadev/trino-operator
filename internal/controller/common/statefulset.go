@@ -2,6 +2,7 @@ package common
 
 import (
 	"path"
+	"strings"
 
 	commonsv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/commons/v1alpha1"
 	"github.com/zncdatadev/operator-go/pkg/builder"
@@ -13,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,11 +27,12 @@ var (
 	TrinoDataDir        = constants.KubedoopDataDir
 	TrinoLogDir         = constants.KubedoopLogDir
 
-	TrinoConfigVolumeName = "config"
-	TrinoDataVolumeName   = "data"
-	TrinoLogVolumeName    = "log"
-
-	HttpPort int32 = 8080
+	TrinoConfigVolumeName      = "config"
+	TrinoDataVolumeName        = "data"
+	TrinoLogVolumeName         = "log"
+	TrinoServerTlsVolumeName   = "server-tls"
+	TrinoInternalTlsVolumeName = "internal-tls"
+	TrinoClientTlsVolumeName   = "client-tls"
 )
 
 func NewStatefulSetReconciler(
@@ -39,6 +42,7 @@ func NewStatefulSetReconciler(
 	image *util.Image,
 	stopped bool,
 	replicas *int32,
+	ports []corev1.ContainerPort,
 	options builder.WorkloadOptions,
 ) (*reconciler.StatefulSet, error) {
 	builder := NewStatefulSetBuilder(
@@ -47,6 +51,7 @@ func NewStatefulSetReconciler(
 		replicas,
 		image,
 		clusterConfig,
+		ports,
 		options,
 	)
 
@@ -66,7 +71,9 @@ type StatefulSetBuilder struct {
 	ClusterConfig *trinosv1alpha1.ClusterConfigSpec
 	Resource      *commonsv1alpha1.ResourcesSpec
 	Image         *util.Image
+	ClusterName   string
 	RoleName      string
+	ports         []corev1.ContainerPort
 }
 
 func NewStatefulSetBuilder(
@@ -75,6 +82,7 @@ func NewStatefulSetBuilder(
 	replicas *int32,
 	image *util.Image,
 	clusterConfig *trinosv1alpha1.ClusterConfigSpec,
+	ports []corev1.ContainerPort,
 	options builder.WorkloadOptions,
 ) *StatefulSetBuilder {
 	return &StatefulSetBuilder{
@@ -87,7 +95,9 @@ func NewStatefulSetBuilder(
 		),
 		ClusterConfig: clusterConfig,
 		RoleName:      options.RoleName,
+		ClusterName:   options.ClusterName,
 		Image:         image,
+		ports:         ports,
 	}
 }
 
@@ -98,25 +108,40 @@ func (b *StatefulSetBuilder) Build(ctx context.Context) (ctrlclient.Object, erro
 	return b.GetObject()
 }
 
+func (b *StatefulSetBuilder) enabledTls() bool {
+	return b.ClusterConfig != nil && b.ClusterConfig.Tls != nil
+}
+
 func (b *StatefulSetBuilder) getMainContainer() *corev1.Container {
 	container := builder.NewContainer(b.RoleName, b.Image)
 	container.SetCommand([]string{"sh", "-c"})
 	container.SetArgs(b.getMainContainerArgs())
 	container.AddVolumeMounts(b.getMainContainerVolumeMounts())
-	container.AddPort(corev1.ContainerPort{
-		Name:          "http",
-		ContainerPort: int32(HttpPort),
+	if b.enabledTls() {
+		container.AddEnvFromSecret(getInternalSharedSecretName(b.ClusterName))
+	}
+	container.AddPorts(b.ports)
+	container.SetLivenessProbe(&corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			TCPSocket: &corev1.TCPSocketAction{
+				Port: intstr.FromString(b.ports[0].Name),
+			},
+		},
+		InitialDelaySeconds: 30,
+		TimeoutSeconds:      1,
+		PeriodSeconds:       10,
+		FailureThreshold:    3,
 	})
 
 	return container.Build()
 }
 
 func (b *StatefulSetBuilder) getMainContainerArgs() []string {
+	// TODO: Add s3 tls verification, add s3 truststore to client truststore
 	arg := `
 set -ex
 mkdir -p ` + TrinoConfigDir + `
 cp ` + path.Join(TrinoConfigMountDir, "*") + ` ` + TrinoConfigDir + `
-
 
 prepare_signal_handlers()
 {
@@ -145,10 +170,20 @@ wait_for_termination()
     trap - TERM
     wait ${term_child_pid} 2>/dev/null
     set -e
-} 
+}
 
 rm -f /kubedoop/log/_vector/shutdown
 prepare_signal_handlers
+
+keytool \
+	-importkeystore \
+	-srckeystore /etc/pki/java/cacerts \
+	-srcstoretype JKS \
+	-srcstorepass ` + DefaultTlsPassphrase + `\
+	-destkeystore ` + path.Join(ClientTlsPath, "truststore.p12") + `\
+	-deststoretype PKCS12 \
+	-deststorepass ` + DefaultTlsPassphrase + `\
+	-noprompt
 
 bin/launcher run --etc-dir ` + TrinoConfigDir + ` --data-dir ` + TrinoDataDir + `
 wait_for_termination $!
@@ -158,7 +193,7 @@ mkdir -p /kubedoop/log/_vector && touch /kubedoop/log/_vector/shutdown
 }
 
 func (b *StatefulSetBuilder) getMainContainerVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+	volumes := []corev1.VolumeMount{
 		{
 			Name:      TrinoConfigVolumeName,
 			MountPath: TrinoConfigMountDir,
@@ -171,7 +206,24 @@ func (b *StatefulSetBuilder) getMainContainerVolumeMounts() []corev1.VolumeMount
 			Name:      TrinoLogVolumeName,
 			MountPath: TrinoLogDir,
 		},
+		{
+			Name:      TrinoClientTlsVolumeName,
+			MountPath: ClientTlsPath,
+		},
 	}
+
+	if b.enabledTls() {
+		volumes = append(volumes, corev1.VolumeMount{
+			Name:      TrinoServerTlsVolumeName,
+			MountPath: ServerTlsMountPath,
+		},
+			corev1.VolumeMount{
+				Name:      TrinoInternalTlsVolumeName,
+				MountPath: InternalTlsMountPath,
+			},
+		)
+	}
+	return volumes
 }
 
 // func (b *StatefulSetBuilder) getVectorContainer() *corev1.Container {
@@ -179,7 +231,7 @@ func (b *StatefulSetBuilder) getMainContainerVolumeMounts() []corev1.VolumeMount
 // }
 
 func (b *StatefulSetBuilder) getVolumes() []corev1.Volume {
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: TrinoConfigVolumeName,
 			VolumeSource: corev1.VolumeSource{
@@ -198,7 +250,71 @@ func (b *StatefulSetBuilder) getVolumes() []corev1.Volume {
 				},
 			},
 		},
+		{
+			Name: TrinoClientTlsVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					SizeLimit: ptr.To(resource.MustParse("1Mi")),
+				},
+			},
+		},
 	}
+
+	if b.enabledTls() {
+		secretClassName := b.ClusterConfig.Tls.ServerSecretClass
+		if secretClassName == "" {
+			secretClassName = "tls"
+		}
+		volumes = append(volumes, corev1.Volume{
+			Name: TrinoServerTlsVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Ephemeral: &corev1.EphemeralVolumeSource{
+					VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								constants.AnnotationSecretsClass:          secretClassName,
+								constants.AnnotationSecretsScope:          strings.Join([]string{string(constants.PodScope), string(constants.NodeScope)}, ","),
+								constants.AnnotationSecretsFormat:         string(constants.TLSP12),
+								constants.AnnotationSecretsPKCS12Password: DefaultTlsPassphrase,
+							},
+						},
+						Spec: corev1.PersistentVolumeClaimSpec{
+							AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+							StorageClassName: constants.SecretStorageClassPtr(),
+							Resources: corev1.VolumeResourceRequirements{
+								Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Mi")},
+							},
+						},
+					},
+				},
+			},
+		}, corev1.Volume{
+			Name: TrinoInternalTlsVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Ephemeral: &corev1.EphemeralVolumeSource{
+					VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								constants.AnnotationSecretsClass:          secretClassName,
+								constants.AnnotationSecretsScope:          strings.Join([]string{string(constants.PodScope), string(constants.NodeScope)}, ","),
+								constants.AnnotationSecretsFormat:         string(constants.TLSP12),
+								constants.AnnotationSecretsPKCS12Password: DefaultTlsPassphrase,
+							},
+						},
+						Spec: corev1.PersistentVolumeClaimSpec{
+							AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+							StorageClassName: constants.SecretStorageClassPtr(),
+							Resources: corev1.VolumeResourceRequirements{
+								Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Mi")},
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return volumes
 }
 
 func (b *StatefulSetBuilder) getDataStorageSize() resource.Quantity {

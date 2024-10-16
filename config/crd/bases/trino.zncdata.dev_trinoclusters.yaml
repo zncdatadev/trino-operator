@@ -99,12 +99,15 @@ spec:
                         type: object
                     type: object
                   listenerClass:
+                    default: cluster-internal
                     type: string
                   tls:
                     properties:
                       internalSecretClass:
+                        default: tls
                         type: string
                       serverSecretClass:
+                        default: tls
                         type: string
                     type: object
                   vectorAggregatorConfigMapName:

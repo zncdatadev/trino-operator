@@ -62,8 +62,13 @@ func (r *Reconciler) RegisterResources(ctx context.Context) error {
 
 func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info reconciler.RoleGroupInfo, roleGroupSpec any) ([]reconciler.Reconciler, error) {
 	spec := roleGroupSpec.(*trinov1alpha1.RoleGroupSpec)
-
 	var reconcilers []reconciler.Reconciler
+
+	ports := []corev1.ContainerPort{{Name: "http", ContainerPort: trinov1alpha1.HttpPort}}
+
+	if r.ClusterConfig != nil && r.ClusterConfig.Tls != nil {
+		ports = []corev1.ContainerPort{{Name: "https", ContainerPort: trinov1alpha1.HttpsPort}}
+	}
 
 	options := builder.WorkloadOptions{
 		Options: builder.Options{
@@ -94,6 +99,7 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 		r.Client,
 		r.CoordiantorSvcFqdn,
 		r.ClusterConfig,
+		spec.Config,
 		info,
 	)
 
@@ -102,7 +108,7 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 	serviceReconciler := reconciler.NewServiceReconciler(
 		r.Client,
 		info.GetFullName(),
-		[]corev1.ContainerPort{{Name: "http", ContainerPort: common.HttpPort}},
+		ports,
 		func(sbo *builder.ServiceBuilderOption) {
 			sbo.Labels = info.GetLabels()
 			sbo.Annotations = info.GetAnnotations()
@@ -120,6 +126,7 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 		r.Image,
 		r.ClusterStopped,
 		spec.Replicas,
+		ports,
 		options,
 	)
 	if err != nil {

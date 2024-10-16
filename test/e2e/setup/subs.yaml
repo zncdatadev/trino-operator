@@ -1,0 +1,33 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: commons-operator-sub
+spec:
+  channel: stable
+  name: commons-operator
+  source: kubedoop-catalog
+  sourceNamespace: ($namespace)
+  installPlanApproval: Automated  
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: secret-operator-sub
+spec:
+  channel: stable
+  name: secret-operator
+  source: kubedoop-catalog
+  sourceNamespace: ($namespace)
+  installPlanApproval: Automated  
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: listener-operator-sub
+spec:
+  channel: stable
+  name: listener-operator
+  source: kubedoop-catalog
+  sourceNamespace: ($namespace)
+  installPlanApproval: Automated  
