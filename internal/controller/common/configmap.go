@@ -119,12 +119,14 @@ func (b *ConfigMapBuilder) Build(ctx context.Context) (ctrlclient.Object, error)
 	if err != nil {
 		return nil, err
 	}
+	b.AddItem("node.properties", s)
 
 	secretProperties := b.getSecurityProperties()
 	s, err = secretProperties.Marshal()
 	if err != nil {
 		return nil, err
 	}
+	b.AddItem("secret.properties", s)
 
 	b.AddItem("jvm.config", b.getJvmProperties())
 	b.AddItem("log.properties", `=info

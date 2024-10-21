@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	authv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/authentication/v1alpha1"
 	"github.com/zncdatadev/operator-go/pkg/config/properties"
@@ -47,6 +48,7 @@ func (o *Oidc) GetConfigProperties() *properties.Properties {
 
 	p := properties.NewProperties()
 	p.Add("http-server.authentication.type", "OAUTH2")
+	p.Add("http-server.authentication.oauth2.scopes", strings.Join(scopes, " "))
 	p.Add("http-server.authentication.oauth2.client-id", fmt.Sprintf("${ENV:%s_CLIENT_ID}", o.getEnvNamePrefix()))
 	p.Add("http-server.authentication.oauth2.client-secret", fmt.Sprintf("${ENV:%s_CLIENT_SECRET}", o.getEnvNamePrefix()))
 	p.Add("http-server.authentication.oauth2.issuer", issuer.String())

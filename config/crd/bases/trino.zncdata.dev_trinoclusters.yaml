@@ -49,6 +49,11 @@ spec:
                         oidc:
                           properties:
                             clientCredentialsSecret:
+                              description: |-
+                                OIDC client credentials secret. It must contain the following keys:
+                                  - `CLIENT_ID`: The client ID of the OIDC client.
+                                  - `CLIENT_SECRET`: The client secret of the OIDC client.
+                                credentials will omit to pod environment variables.
                               type: string
                             extraScopes:
                               items:
@@ -1169,6 +1174,7 @@ spec:
                             type: integer
                         type: object
                       queryMaxMemory:
+                        default: 50GB
                         type: string
                       queryMaxMemoryPerNode:
                         type: string
@@ -2308,6 +2314,7 @@ spec:
                                   type: integer
                               type: object
                             queryMaxMemory:
+                              default: 50GB
                               type: string
                             queryMaxMemoryPerNode:
                               type: string
@@ -3453,6 +3460,7 @@ spec:
                             type: integer
                         type: object
                       queryMaxMemory:
+                        default: 50GB
                         type: string
                       queryMaxMemoryPerNode:
                         type: string
@@ -4592,6 +4600,7 @@ spec:
                                   type: integer
                               type: object
                             queryMaxMemory:
+                              default: 50GB
                               type: string
                             queryMaxMemoryPerNode:
                               type: string
