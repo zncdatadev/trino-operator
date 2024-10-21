@@ -11,6 +11,7 @@ import (
 	"github.com/zncdatadev/operator-go/pkg/client"
 	"github.com/zncdatadev/operator-go/pkg/config/properties"
 	"github.com/zncdatadev/operator-go/pkg/constants"
+	"github.com/zncdatadev/operator-go/pkg/productlogging"
 	"github.com/zncdatadev/operator-go/pkg/reconciler"
 	"github.com/zncdatadev/operator-go/pkg/util"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -66,12 +67,15 @@ var _ builder.ConfigBuilder = &ConfigMapBuilder{}
 type ConfigMapBuilder struct {
 	builder.ConfigMapBuilder
 
-	TrinoConfig        *trinosv1alpha1.ConfigSpec
-	ClusterConfig      *trinosv1alpha1.ClusterConfigSpec
-	TrinoConig         *trinosv1alpha1.ConfigSpec
-	RoleName           string
+	TrinoConfig   *trinosv1alpha1.ConfigSpec
+	ClusterConfig *trinosv1alpha1.ClusterConfigSpec
+	TrinoConig    *trinosv1alpha1.ConfigSpec
+
 	CoordiantorSvcFqdn string
-	ClusterName        string
+
+	ClusterName   string
+	RoleName      string
+	RoleGroupName string
 }
 
 func NewConfigMapBuilder(
@@ -89,11 +93,13 @@ func NewConfigMapBuilder(
 			options.Labels,
 			options.Annotations,
 		),
-		RoleName:           options.RoleName,
-		ClusterName:        options.ClusterName,
 		CoordiantorSvcFqdn: coordinatorSvcFqdn,
 		ClusterConfig:      clusterConfig,
 		TrinoConfig:        trinoConfig,
+
+		ClusterName:   options.ClusterName,
+		RoleName:      options.RoleName,
+		RoleGroupName: options.RoleGroupName,
 	}
 }
 
@@ -123,6 +129,21 @@ func (b *ConfigMapBuilder) Build(ctx context.Context) (ctrlclient.Object, error)
 	b.AddItem("jvm.config", b.getJvmProperties())
 	b.AddItem("log.properties", `=info
 `)
+
+	if b.ClusterConfig.VectorAggregatorConfigMapName != "" {
+		s, err := productlogging.MakeVectorYaml(
+			ctx, b.Client.Client,
+			b.Client.GetOwnerNamespace(),
+			b.ClusterName,
+			b.RoleName,
+			b.RoleGroupName,
+			b.ClusterConfig.VectorAggregatorConfigMapName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		b.AddItem(builder.VectorConfigFile, s)
+	}
 
 	return b.GetObject(), nil
 }
@@ -207,10 +228,6 @@ func (b *ConfigMapBuilder) getNodeProperties() *properties.Properties {
 	p.Add("node.environment", strings.ReplaceAll(b.ClusterName, "-", "_"))
 	return p
 }
-
-// func (b *ConfigMapBuilder) getLogProperties() *properties.Properties {
-// 	panic("implement me")
-// }
 
 func (b *ConfigMapBuilder) getSecurityProperties() *properties.Properties {
 	p := properties.NewProperties()

@@ -111,7 +111,20 @@ func (b *StatefulSetBuilder) Build(ctx context.Context) (ctrlclient.Object, erro
 	}
 	b.AddVolumes(volumes)
 	b.AddContainer(b.getMainContainer())
-	return b.GetObject()
+	obj, err := b.GetObject()
+	if err != nil {
+		return nil, err
+	}
+	if b.ClusterConfig.VectorAggregatorConfigMapName != "" {
+		builder.NewVectorDecorator(
+			obj,
+			b.Image,
+			TrinoLogVolumeName,
+			TrinoConfigVolumeName,
+			b.ClusterConfig.VectorAggregatorConfigMapName)
+
+	}
+	return obj, nil
 }
 
 func (b *StatefulSetBuilder) enabledTls() bool {
@@ -261,10 +274,6 @@ func (b *StatefulSetBuilder) getMainContainerVolumeMounts(ctx context.Context) (
 	return volumes, nil
 }
 
-// func (b *StatefulSetBuilder) getVectorContainer() *corev1.Container {
-// 	panic("implement me")
-// }
-
 func (b *StatefulSetBuilder) getVolumes(ctx context.Context) ([]corev1.Volume, error) {
 	volumes := []corev1.Volume{
 		{
@@ -342,10 +351,7 @@ func (b *StatefulSetBuilder) getPvcTemplates() []corev1.PersistentVolumeClaim {
 	}
 }
 
-func buildTlsVolume(
-	name string,
-	secretClassName string,
-) corev1.Volume {
+func buildTlsVolume(name string, secretClassName string) corev1.Volume {
 	return corev1.Volume{
 		Name: name,
 		VolumeSource: corev1.VolumeSource{
