@@ -35,9 +35,9 @@ spec:
         file: cluster-tls.yaml
     - assert:
         file: cluster-assert.yaml
-    # cleanup:
-    # - sleep:
-    #     duration: 60s
+    cleanup:
+    - sleep:
+        duration: 20s
     # catch:
     #   - sleep:
     #       duration: 5s

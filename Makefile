@@ -289,6 +289,7 @@ bundle-cleanup: ## Clean up the bundle image.
 	$(OPERATOR_SDK) cleanup $(PROJECT_NAME)
 
 OPM_VERSION ?= v1.43.0
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:latest
 
 .PHONY: opm
 OPM = ./bin/opm
@@ -299,7 +300,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
 	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/$${OS}-$${ARCH}-opm ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/${OPM_VERSION}/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
 else
@@ -307,20 +308,20 @@ OPM = $(shell which opm)
 endif
 endif
 
-# The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:latest
-
-.PHONY: catalog-build
-catalog-build: opm ## Build a catalog manifests.
+.PHONY: catalog
+catalog: opm ## Build a catalog manifests.
 	mkdir -p catalog
 	@if ! test -f ./catalog.Dockerfile; then \
 		$(OPM) generate dockerfile catalog; \
 	fi
-	sed -E "s|(image: ).*-bundle:v$(VERSION)|\1$(BUNDLE_IMG)|g" catalog-template.yaml | \
-	$(OPM) alpha render-template basic -o yaml > catalog/catalog.yaml
+	$(OPM) alpha render-template basic -o yaml catalog-template.yaml > catalog/catalog.yaml
 
-.PHONY: catalog-docker-build
-catalog-docker-build: ## Build a catalog image.
+.PHONY: catalog-validate
+catalog-validate: opm ## Validate a catalog manifests.
+	$(OPM) validate catalog
+
+.PHONY: catalog-build
+catalog-build: ## Build a catalog image.
 	$(CONTAINER_TOOL) build -t ${CATALOG_IMG} -f catalog.Dockerfile .
 
 # Push the catalog image.
@@ -328,12 +329,13 @@ catalog-docker-build: ## Build a catalog image.
 catalog-docker-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-.PHONY: catalog-docker-buildx
-catalog-docker-buildx: ## Build and push a catalog image for cross-platform support
+.PHONY: catalog-buildx
+catalog-buildx: ## Build and push a catalog image for cross-platform support
 	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
 	$(CONTAINER_TOOL) buildx use project-v3-builder
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) -f catalog.Dockerfile --tag ${CATALOG_IMG} .
-	- $(CONTAINER_TOOL) buildx rm project-v3-builder
+	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) -f catalog.Dockerfile --tag ${CATALOG_IMG} .
+	$(CONTAINER_TOOL) buildx rm project-v3-builder
+
 
 ##@ E2E
 
