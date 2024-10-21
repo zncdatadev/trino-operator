@@ -157,3 +157,5 @@ catalog.Dockerfile
 
 # test
 *-local.yaml
+
+**/__debug_bin**

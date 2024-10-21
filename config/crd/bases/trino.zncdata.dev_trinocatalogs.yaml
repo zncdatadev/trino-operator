@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.2
   name: trinocatalogs.trino.zncdata.dev
 spec:
   group: trino.zncdata.dev
@@ -95,28 +95,84 @@ spec:
                           properties:
                             bucketName:
                               type: string
-                            credential:
-                              description: S3Credential include `ACCESS_KEY` and `SECRET_KEY`
-                                or ExistingSecret.
+                            connection:
                               properties:
-                                scope:
+                                inline:
+                                  description: S3ConnectionSpec defines the desired
+                                    credential of S3Connection
                                   properties:
-                                    node:
+                                    credentials:
+                                      description: |-
+                                        Provides access credentials for S3Connection through SecretClass. SecretClass only needs to include:
+                                         - ACCESS_KEY
+                                         - SECRET_KEY
+                                      properties:
+                                        scope:
+                                          description: SecretClass scope
+                                          properties:
+                                            node:
+                                              type: boolean
+                                            pod:
+                                              type: boolean
+                                            services:
+                                              items:
+                                                type: string
+                                              type: array
+                                          type: object
+                                        secretClass:
+                                          type: string
+                                      required:
+                                      - secretClass
+                                      type: object
+                                    host:
+                                      type: string
+                                    pathStyle:
+                                      default: false
                                       type: boolean
-                                    pod:
-                                      type: boolean
-                                    services:
-                                      items:
-                                        type: string
-                                      type: array
+                                    port:
+                                      type: integer
+                                    tls:
+                                      properties:
+                                        verification:
+                                          description: |-
+                                            TLSPrivider defines the TLS provider for authentication.
+                                            You can specify the none or server or mutual verification.
+                                          properties:
+                                            mutual:
+                                              properties:
+                                                certSecretClass:
+                                                  type: string
+                                              required:
+                                              - certSecretClass
+                                              type: object
+                                            none:
+                                              type: object
+                                            server:
+                                              properties:
+                                                caCert:
+                                                  description: |-
+                                                    CACert is the CA certificate for server verification.
+                                                    You can specify the secret class or the webPki.
+                                                  properties:
+                                                    secretClass:
+                                                      type: string
+                                                    webPki:
+                                                      type: object
+                                                  type: object
+                                              required:
+                                              - caCert
+                                              type: object
+                                          type: object
+                                      type: object
+                                  required:
+                                  - credentials
+                                  - host
                                   type: object
-                                secretClass:
+                                reference:
                                   type: string
-                              required:
-                              - secretClass
                               type: object
-                            reference:
-                              type: string
+                          required:
+                          - bucketName
                           type: object
                       type: object
                     iceberg:
@@ -137,28 +193,84 @@ spec:
                           properties:
                             bucketName:
                               type: string
-                            credential:
-                              description: S3Credential include `ACCESS_KEY` and `SECRET_KEY`
-                                or ExistingSecret.
+                            connection:
                               properties:
-                                scope:
+                                inline:
+                                  description: S3ConnectionSpec defines the desired
+                                    credential of S3Connection
                                   properties:
-                                    node:
+                                    credentials:
+                                      description: |-
+                                        Provides access credentials for S3Connection through SecretClass. SecretClass only needs to include:
+                                         - ACCESS_KEY
+                                         - SECRET_KEY
+                                      properties:
+                                        scope:
+                                          description: SecretClass scope
+                                          properties:
+                                            node:
+                                              type: boolean
+                                            pod:
+                                              type: boolean
+                                            services:
+                                              items:
+                                                type: string
+                                              type: array
+                                          type: object
+                                        secretClass:
+                                          type: string
+                                      required:
+                                      - secretClass
+                                      type: object
+                                    host:
+                                      type: string
+                                    pathStyle:
+                                      default: false
                                       type: boolean
-                                    pod:
-                                      type: boolean
-                                    services:
-                                      items:
-                                        type: string
-                                      type: array
+                                    port:
+                                      type: integer
+                                    tls:
+                                      properties:
+                                        verification:
+                                          description: |-
+                                            TLSPrivider defines the TLS provider for authentication.
+                                            You can specify the none or server or mutual verification.
+                                          properties:
+                                            mutual:
+                                              properties:
+                                                certSecretClass:
+                                                  type: string
+                                              required:
+                                              - certSecretClass
+                                              type: object
+                                            none:
+                                              type: object
+                                            server:
+                                              properties:
+                                                caCert:
+                                                  description: |-
+                                                    CACert is the CA certificate for server verification.
+                                                    You can specify the secret class or the webPki.
+                                                  properties:
+                                                    secretClass:
+                                                      type: string
+                                                    webPki:
+                                                      type: object
+                                                  type: object
+                                              required:
+                                              - caCert
+                                              type: object
+                                          type: object
+                                      type: object
+                                  required:
+                                  - credentials
+                                  - host
                                   type: object
-                                secretClass:
+                                reference:
                                   type: string
-                              required:
-                              - secretClass
                               type: object
-                            reference:
-                              type: string
+                          required:
+                          - bucketName
                           type: object
                       type: object
                     tpcds:

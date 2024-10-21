@@ -10,5 +10,5 @@ spec:
     delete: 120s
     error: 10s
     exec: 45s
-  skipDelete: false
+  # skipDelete: true
   failFast: true

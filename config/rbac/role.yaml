@@ -5,52 +5,9 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - ""
   resources:
   - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - persistentvolumeclaims
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - services
   verbs:
   - create
@@ -61,9 +18,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - networking.k8s.io
+  - apps
   resources:
-  - ingresses
+  - statefulsets
   verbs:
   - create
   - delete
@@ -76,17 +33,6 @@ rules:
   - trino.zncdata.dev
   resources:
   - trinocatalogs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - trino.zncdata.dev
-  resources:
   - trinoclusters
   verbs:
   - create

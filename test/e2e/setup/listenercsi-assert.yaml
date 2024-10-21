@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: listenercsi-csi
+status:
+  numberReady: 1
+  numberAvailable: 1

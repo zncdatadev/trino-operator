@@ -1,0 +1,13 @@
+apiVersion: trino.zncdata.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: trino
+spec:
+  coordinators:
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    roleGroups:
+      default:
+        replicas: 1
