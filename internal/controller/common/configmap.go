@@ -132,7 +132,7 @@ func (b *ConfigMapBuilder) Build(ctx context.Context) (ctrlclient.Object, error)
 	b.AddItem("log.properties", `=info
 `)
 
-	if b.ClusterConfig.VectorAggregatorConfigMapName != "" {
+	if b.ClusterConfig != nil && b.ClusterConfig.VectorAggregatorConfigMapName != "" {
 		s, err := productlogging.MakeVectorYaml(
 			ctx, b.Client.Client,
 			b.Client.GetOwnerNamespace(),
@@ -210,7 +210,7 @@ func (b *ConfigMapBuilder) getConfigProperties(ctx context.Context) (*properties
 	p.Add("log.max-total-size", "10MB")
 	p.Add("log.path", path.Join(constants.KubedoopLogDir, "trino", "airlift.json"))
 
-	if b.ClusterConfig.Authentication != nil {
+	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil {
 		authentication, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
 		if err != nil {
 			return nil, err

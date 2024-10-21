@@ -115,7 +115,7 @@ func (b *StatefulSetBuilder) Build(ctx context.Context) (ctrlclient.Object, erro
 	if err != nil {
 		return nil, err
 	}
-	if b.ClusterConfig.VectorAggregatorConfigMapName != "" {
+	if b.ClusterConfig != nil && b.ClusterConfig.VectorAggregatorConfigMapName != "" {
 		builder.NewVectorDecorator(
 			obj,
 			b.Image,
@@ -167,13 +167,15 @@ func (b *StatefulSetBuilder) getMainContainer() *corev1.Container {
 
 func (b *StatefulSetBuilder) getMainContainerArgs(ctx context.Context) ([]string, error) {
 	// TODO: Add s3 tls verification, add s3 truststore to client truststore
+	authCommands := ""
+	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil {
+		auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
+		if err != nil {
+			return nil, err
+		}
 
-	auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
-	if err != nil {
-		return nil, err
+		authCommands = strings.Join(auth.GetCommands(), "\n")
 	}
-
-	authCommands := strings.Join(auth.GetCommands(), "\n")
 
 	arg := `
 set -ex
@@ -263,7 +265,7 @@ func (b *StatefulSetBuilder) getMainContainerVolumeMounts(ctx context.Context) (
 		)
 	}
 
-	if b.ClusterConfig.Authentication != nil {
+	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil {
 		auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
 		if err != nil {
 			return nil, err
@@ -312,7 +314,7 @@ func (b *StatefulSetBuilder) getVolumes(ctx context.Context) ([]corev1.Volume, e
 		volumes = append(volumes, buildTlsVolume(TrinoServerTlsVolumeName, secretClassName), buildTlsVolume(TrinoInternalTlsVolumeName, secretClassName))
 	}
 
-	if b.ClusterConfig.Authentication != nil {
+	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil {
 		auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
 		if err != nil {
 			return nil, err
