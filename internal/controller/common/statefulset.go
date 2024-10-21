@@ -19,6 +19,7 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	trinosv1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/controller/common/authz"
 )
 
 var (
@@ -103,7 +104,12 @@ func NewStatefulSetBuilder(
 
 func (b *StatefulSetBuilder) Build(ctx context.Context) (ctrlclient.Object, error) {
 	b.AddVolumeClaimTemplates(b.getPvcTemplates())
-	b.AddVolumes(b.getVolumes())
+
+	volumes, err := b.getVolumes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	b.AddVolumes(volumes)
 	b.AddContainer(b.getMainContainer())
 	return b.GetObject()
 }
@@ -115,8 +121,18 @@ func (b *StatefulSetBuilder) enabledTls() bool {
 func (b *StatefulSetBuilder) getMainContainer() *corev1.Container {
 	container := builder.NewContainer(b.RoleName, b.Image)
 	container.SetCommand([]string{"sh", "-c"})
-	container.SetArgs(b.getMainContainerArgs())
-	container.AddVolumeMounts(b.getMainContainerVolumeMounts())
+
+	args, err := b.getMainContainerArgs(context.Background())
+	if err != nil {
+		return nil
+	}
+	container.SetArgs(args)
+
+	volumeMounts, err := b.getMainContainerVolumeMounts(context.Background())
+	if err != nil {
+		return nil
+	}
+	container.AddVolumeMounts(volumeMounts)
 	if b.enabledTls() {
 		container.AddEnvFromSecret(getInternalSharedSecretName(b.ClusterName))
 	}
@@ -136,8 +152,16 @@ func (b *StatefulSetBuilder) getMainContainer() *corev1.Container {
 	return container.Build()
 }
 
-func (b *StatefulSetBuilder) getMainContainerArgs() []string {
+func (b *StatefulSetBuilder) getMainContainerArgs(ctx context.Context) ([]string, error) {
 	// TODO: Add s3 tls verification, add s3 truststore to client truststore
+
+	auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
+	if err != nil {
+		return nil, err
+	}
+
+	authCommands := strings.Join(auth.GetCommands(), "\n")
+
 	arg := `
 set -ex
 mkdir -p ` + TrinoConfigDir + `
@@ -185,14 +209,16 @@ keytool \
 	-deststorepass ` + DefaultTlsPassphrase + `\
 	-noprompt
 
+` + authCommands + `
+
 bin/launcher run --etc-dir ` + TrinoConfigDir + ` --data-dir ` + TrinoDataDir + `
 wait_for_termination $!
 mkdir -p /kubedoop/log/_vector && touch /kubedoop/log/_vector/shutdown
 `
-	return []string{util.IndentTab4Spaces(arg)}
+	return []string{util.IndentTab4Spaces(arg)}, nil
 }
 
-func (b *StatefulSetBuilder) getMainContainerVolumeMounts() []corev1.VolumeMount {
+func (b *StatefulSetBuilder) getMainContainerVolumeMounts(ctx context.Context) ([]corev1.VolumeMount, error) {
 	volumes := []corev1.VolumeMount{
 		{
 			Name:      TrinoConfigVolumeName,
@@ -223,14 +249,23 @@ func (b *StatefulSetBuilder) getMainContainerVolumeMounts() []corev1.VolumeMount
 			},
 		)
 	}
-	return volumes
+
+	if b.ClusterConfig.Authentication != nil {
+		auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
+		if err != nil {
+			return nil, err
+		}
+		volumes = append(volumes, auth.GetVolumeMounts()...)
+	}
+
+	return volumes, nil
 }
 
 // func (b *StatefulSetBuilder) getVectorContainer() *corev1.Container {
 // 	panic("implement me")
 // }
 
-func (b *StatefulSetBuilder) getVolumes() []corev1.Volume {
+func (b *StatefulSetBuilder) getVolumes(ctx context.Context) ([]corev1.Volume, error) {
 	volumes := []corev1.Volume{
 		{
 			Name: TrinoConfigVolumeName,
@@ -265,56 +300,18 @@ func (b *StatefulSetBuilder) getVolumes() []corev1.Volume {
 		if secretClassName == "" {
 			secretClassName = "tls"
 		}
-		volumes = append(volumes, corev1.Volume{
-			Name: TrinoServerTlsVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Ephemeral: &corev1.EphemeralVolumeSource{
-					VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								constants.AnnotationSecretsClass:          secretClassName,
-								constants.AnnotationSecretsScope:          strings.Join([]string{string(constants.PodScope), string(constants.NodeScope)}, ","),
-								constants.AnnotationSecretsFormat:         string(constants.TLSP12),
-								constants.AnnotationSecretsPKCS12Password: DefaultTlsPassphrase,
-							},
-						},
-						Spec: corev1.PersistentVolumeClaimSpec{
-							AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-							StorageClassName: constants.SecretStorageClassPtr(),
-							Resources: corev1.VolumeResourceRequirements{
-								Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Mi")},
-							},
-						},
-					},
-				},
-			},
-		}, corev1.Volume{
-			Name: TrinoInternalTlsVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Ephemeral: &corev1.EphemeralVolumeSource{
-					VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								constants.AnnotationSecretsClass:          secretClassName,
-								constants.AnnotationSecretsScope:          strings.Join([]string{string(constants.PodScope), string(constants.NodeScope)}, ","),
-								constants.AnnotationSecretsFormat:         string(constants.TLSP12),
-								constants.AnnotationSecretsPKCS12Password: DefaultTlsPassphrase,
-							},
-						},
-						Spec: corev1.PersistentVolumeClaimSpec{
-							AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-							StorageClassName: constants.SecretStorageClassPtr(),
-							Resources: corev1.VolumeResourceRequirements{
-								Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Mi")},
-							},
-						},
-					},
-				},
-			},
-		})
+		volumes = append(volumes, buildTlsVolume(TrinoServerTlsVolumeName, secretClassName), buildTlsVolume(TrinoInternalTlsVolumeName, secretClassName))
 	}
 
-	return volumes
+	if b.ClusterConfig.Authentication != nil {
+		auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
+		if err != nil {
+			return nil, err
+		}
+		volumes = append(volumes, auth.GetVolumes()...)
+	}
+
+	return volumes, nil
 }
 
 func (b *StatefulSetBuilder) getDataStorageSize() resource.Quantity {
@@ -338,6 +335,38 @@ func (b *StatefulSetBuilder) getPvcTemplates() []corev1.PersistentVolumeClaim {
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: b.getDataStorageSize(),
+					},
+				},
+			},
+		},
+	}
+}
+
+func buildTlsVolume(
+	name string,
+	secretClassName string,
+) corev1.Volume {
+	return corev1.Volume{
+		Name: name,
+		VolumeSource: corev1.VolumeSource{
+			Ephemeral: &corev1.EphemeralVolumeSource{
+				VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							constants.AnnotationSecretsClass:          secretClassName,
+							constants.AnnotationSecretsScope:          strings.Join([]string{string(constants.PodScope), string(constants.NodeScope)}, ","),
+							constants.AnnotationSecretsFormat:         string(constants.TLSP12),
+							constants.AnnotationSecretsPKCS12Password: DefaultTlsPassphrase,
+						},
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes:      []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+						StorageClassName: constants.SecretStorageClassPtr(),
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("1Mi"),
+							},
+						},
 					},
 				},
 			},

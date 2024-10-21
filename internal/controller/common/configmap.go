@@ -17,6 +17,7 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	trinosv1alpha1 "github.com/zncdatadev/trino-operator/api/v1alpha1"
+	"github.com/zncdatadev/trino-operator/internal/controller/common/authz"
 )
 
 const (
@@ -97,19 +98,26 @@ func NewConfigMapBuilder(
 }
 
 func (b *ConfigMapBuilder) Build(ctx context.Context) (ctrlclient.Object, error) {
-	properties := map[string]*properties.Properties{
-		"config.properties": b.getConfigProperties(),
-		"node.properties":   b.getNodeProperties(),
-		// "log.properties":    b.getLogProperties(),
-		"security.properties": b.getSecurityProperties(),
+	configProperties, err := b.getConfigProperties(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s, err := configProperties.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	b.AddItem("config.properties", s)
+
+	nodeProperties := b.getNodeProperties()
+	s, err = nodeProperties.Marshal()
+	if err != nil {
+		return nil, err
 	}
 
-	for k, v := range properties {
-		value, err := v.Marshal()
-		if err != nil {
-			return nil, err
-		}
-		b.AddItem(k, value)
+	secretProperties := b.getSecurityProperties()
+	s, err = secretProperties.Marshal()
+	if err != nil {
+		return nil, err
 	}
 
 	b.AddItem("jvm.config", b.getJvmProperties())
@@ -133,7 +141,7 @@ func (b *ConfigMapBuilder) enabledTls() bool {
 	return b.ClusterConfig != nil && b.ClusterConfig.Tls != nil
 }
 
-func (b *ConfigMapBuilder) getConfigProperties() *properties.Properties {
+func (b *ConfigMapBuilder) getConfigProperties(ctx context.Context) (*properties.Properties, error) {
 	p := properties.NewProperties()
 
 	if b.RoleName == "coordinator" {
@@ -179,7 +187,18 @@ func (b *ConfigMapBuilder) getConfigProperties() *properties.Properties {
 	p.Add("log.max-total-size", "10MB")
 	p.Add("log.path", path.Join(constants.KubedoopLogDir, "trino", "airlift.json"))
 
-	return p
+	if b.ClusterConfig.Authentication != nil {
+		authentication, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range authentication.GetConfigProperties().Keys() {
+			value, _ := authentication.GetConfigProperties().Get(key)
+			p.Add(key, value)
+		}
+	}
+
+	return p, nil
 }
 
 func (b *ConfigMapBuilder) getNodeProperties() *properties.Properties {

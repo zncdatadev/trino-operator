@@ -112,6 +112,10 @@ type AuthenticationSpec struct {
 }
 
 type OidcSpec struct {
+	// OIDC client credentials secret. It must contain the following keys:
+	//   - `CLIENT_ID`: The client ID of the OIDC client.
+	//   - `CLIENT_SECRET`: The client secret of the OIDC client.
+	// credentials will omit to pod environment variables.
 	// +kubebuilder:validation:Required
 	ClientCredentialsSecret string `json:"clientCredentialsSecret"`
 	// +kubebuilder:validation:Optional
