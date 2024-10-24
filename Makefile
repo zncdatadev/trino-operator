@@ -336,6 +336,44 @@ catalog-buildx: ## Build and push a catalog image for cross-platform support
 	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) -f catalog.Dockerfile --tag ${CATALOG_IMG} .
 	$(CONTAINER_TOOL) buildx rm project-v3-builder
 
+##@ helm
+
+HELM_VERSION ?= v3.16.2
+HELM = $(LOCALBIN)/helm
+
+.PHONY: helm
+helm: ## Download helm locally if necessary.
+ifeq (,$(shell which $(HELM)))
+ifeq (,$(shell which helm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(HELM)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSL https://get.helm.sh/helm-$(HELM_VERSION)-$${OS}-$${ARCH}.tar.gz | tar -xz -C $(LOCALBIN) --strip-components=1 $${OS}-$${ARCH}/helm ;\
+	chmod +x $(HELM) ;\
+	}
+else
+HELM = $(shell which helm)
+endif
+endif
+
+HELM_DEPENDS ?=  commons-operator listener-operator secret-operator
+TEST_NAMESPACE = kubedoop-operators
+
+.PHONY: helm-install-depends
+helm-install-depends: ## Install the helm chart depends.
+	$(HELM) repo add kubedoop https://zncdatadev.github.io/kubedoop-helm-charts/
+	for dep in $(HELM_DEPENDS); do \
+		$(HELM) upgrade --install --create-namespace --namespace $(TEST_NAMESPACE) --wait $$dep kubedoop/$$dep --version $(VERSION); \
+	done
+
+.PHONY: helm-install
+helm-install: helm-install-depends ## Install the helm chart.
+	$(HELM) upgrade --install --create-namespace --namespace $(TEST_NAMESPACE) --wait $(PROJECT_NAME) kubedoop/$(PROJECT_NAME) --version $(VERSION)
+
+.PHONY: helm-uninstall
+helm-uninstall: ## Uninstall the helm chart.
+	$(HELM) uninstall --namespace $(TEST_NAMESPACE) $(PROJECT_NAME)
 
 ##@ E2E
 
@@ -368,17 +406,10 @@ endif
 OLM_VERSION ?= v0.28.0
 
 # Create a kind cluster, install ingress-nginx, and wait for it to be available.
+# Create a kind cluster
 .PHONY: kind-create
 kind-create: kind ## Create a kind cluster.
-	$(KIND) create cluster --config $(KIND_CONFIG)  --image $(KIND_IMAGE) --name $(KIND_CLUSTER_NAME) --kubeconfig $(KIND_KUBECONFIG) --wait 120s
-	KUBECONFIG=$(KIND_KUBECONFIG) make kind-setup
-
-.PHONY: kind-setup
-kind-setup: kind ## setup kind cluster base environment
-	@echo "\nSetup kind cluster base environment, install ingress-nginx and OLM"
-	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-	kubectl -n ingress-nginx wait deployment ingress-nginx-controller --for=condition=available --timeout=300s
-	curl -sSL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_VERSION)/install.sh | bash -s $(OLM_VERSION)
+	$(KIND) create cluster --config $(KIND_CONFIG) --image $(KIND_IMAGE) --name $(KIND_CLUSTER_NAME) --kubeconfig $(KIND_KUBECONFIG) --wait 120s
 
 .PHONY: kind-delete
 kind-delete: kind ## Delete a kind cluster.
@@ -410,24 +441,16 @@ $(CHAINSAW): $(LOCALBIN)
 	fi; \
 	}
 
-# chainsaw setup logical
-# - Build the operator docker image
-# - Load the operator docker image into the kind cluster. When create
-#   operator deployment, it will use the image in the kind cluster.
-# - Rebuild the bundle. If override VERSION / REGISTRY or other variables,
-#   we need to rebuild the bundle to use the new image, or other changes.
 .PHONY: chainsaw-setup
-chainsaw-setup: manifests kustomize ## Run the chainsaw setup
-	@echo "\nSetup chainsaw test environment"
+chainsaw-setup: ## Run the chainsaw setup
 	make docker-build
 	$(KIND) --name $(KIND_CLUSTER_NAME) load docker-image $(IMG)
-	KUBECONFIG=$(KIND_KUBECONFIG) make deploy
+	KUBECONFIG=$(KIND_KUBECONFIG) make helm-install
 
 .PHONY: chainsaw-test
 chainsaw-test: chainsaw ## Run the chainsaw test
-	KUBECONFIG=$(KIND_KUBECONFIG) $(CHAINSAW) test --cluster cluster-1=$(KIND_KUBECONFIG) --test-dir ./test/e2e
-
+	KUBECONFIG=$(KIND_KUBECONFIG) $(CHAINSAW) test --cluster cluster-1=$(KIND_KUBECONFIG) --test-dir ./test/e2e/
 
 .PHONY: chainsaw-cleanup
-chainsaw-cleanup: manifests kustomize ## Run the chainsaw cleanup
-	KUBECONFIG=$(KIND_KUBECONFIG) make undeploy
+chainsaw-cleanup: ## Run the chainsaw cleanup
+	KUBECONFIG=$(KIND_KUBECONFIG) make helm-uninstall
