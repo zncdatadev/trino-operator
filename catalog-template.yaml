@@ -92,7 +92,7 @@ schema: olm.channel
 package: trino-operator
 name: stable
 entries:
-- name: trino-operator.v0.0.0-dev
+- name: trino-operator.0.0.0-dev
 ---
 schema: olm.bundle
-image: quay.io/zncdatadev/trino-operator-bundle:v0.0.0-dev
+image: quay.io/zncdatadev/trino-operator-bundle:0.0.0-dev
