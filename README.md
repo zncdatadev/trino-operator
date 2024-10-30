@@ -1,82 +1,84 @@
-# Zncdata Stack Operator for Trino
+# Kubedoop Operator for Trino
 
-[![Build Status](https://travis-ci.org/zncdata/trino-operator.svg?branch=main)](https://travis-ci.org/zncdata/trino-operator)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![Build](https://github.com/zncdatadev/trino-operator/actions/workflows/main.yml/badge.svg)](https://github.com/zncdatadev/trino-operator/actions/workflows/main.yml)
+[![LICENSE](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zncdatadev/trino-operator)](https://goreportcard.com/report/github.com/zncdatadev/trino-operator)
+[![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/trino-operator)](https://artifacthub.io/packages/helm/kubedoop/trino-operator)
 
-[//]: # ([![codecov]&#40;https://codecov.io/gh/zncdata/trino-operator/branch/main/graph/badge.svg&#41;]&#40;https://codecov.io/gh/zncdata/trino-operator&#41;)
+This is a kubernetes operator to manage apache trino on kubernetes cluster. It's part of the kubedoop ecosystem.
 
-This is a Kubernetes operator to manage [Trino](https://trino.io/) ensembles.
-
-It is part of the Stack ZncData Platform,
-a curated selection of the best open source data apps like Apache Hive, Apache Druid, Trino or Apache Spark,
-working together seamlessly. Based on Kubernetes, it runs everywhere.
+Kubedoop is a cloud-native big data platform built on Kubernetes, designed to simplify the deployment and management of big data applications on Kubernetes.
+It provides a set of pre-configured Operators to easily deploy and manage various big data components such as HDFS, Hive, Spark, Kafka, and more.
 
 ## Quick Start
 
-1. Install Operator Lifecycle Manager (OLM), a tool to help manage the Operators running on your cluster.
+### Add helm repository
 
-    ```bash
-    curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.26.0/install.sh | bash -s v0.26.0
-    ```
+> Please make sure helm version is v3.0.0+
 
-2. First we need to prepare an OperatorGroup
+```bash
+helm repo add kubedoop https://zncdatadev.github.io/kubedoop-helm-charts/
+```
 
-    ```bash
-    apiVersion: operators.coreos.com/v1
-    kind: OperatorGroup
-    metadata:
-      name: operatorgroup
-    spec:
-      targetNamespaces:
-      - tmp
-      upgradeStrategy: Default
-    ```
+### Add required dependencies
 
-3. Start deploying our catalog
+```bash
+helm install commons-operator kubedoop/commons-operator
+helm install listener-operator kubedoop/listener-operator
+helm install secret-operator kubedoop/secret-operator
+```
 
-    ```bash
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: CatalogSource
-    metadata:
-      name: catalog-v0-0-1-alpha
-      namespace: tmp
-    spec:
-      displayName: zncdata operators
-      grpcPodConfig:
-        securityContextConfig: restricted
-      image: quay.io/zncdatadev/catalog:v0.0.1-alpha
-      publisher: zncdata.dev
-      sourceType: grpc
-      updateStrategy:
-        registryPoll:
-          interval: 60m
-    ```
+### Add trino-operator
 
-4. After completing the OperatorGroup and Catalog, you can start installing the service Subscription
+```bash
+helm install trino-operator kubedoop/trino-operator
+```
 
-    ```bash
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: trino-operator-v0-0-1-alpha-sub
-      namespace: tmp
-    spec:
-      channel: fast-v0.0
-      name: trino-operator
-      source: catalog
-      sourceNamespace: tmp
-      installPlanApproval: Automatic
-      startingCSV: trino-operator.v0.0.1-alpha
-    ```
+### Deploy trino cluster
 
-5. After install, watch your operator come up using next command.
+```bash
+kubectl apply -f config/samples
+```
 
-    ```bash
-    kubectl get csv -n tmp
-    ```
+## Kubedoop Ecosystem
 
-6. Install Instances of Custom Resources:
+### Operators
 
-    ```sh
-    kubectl apply -f config/samples/
-    ```
+Kubedoop operators:
+
+- [Kubedoop Operator for Apache DolphinScheduler](https://github.com/zncdatadev/dolphinscheduler-operator)
+- [Kubedoop Operator for Apache Hadoop Hdfs](https://github.com/zncdatadev/hdfs-operator)
+- [Kubedoop Operator for Apache HBase](https://github.com/zncdatadev/hbase-operator)
+- [Kubedoop Operator for Apache Hive](https://github.com/zncdatadev/hive-operator)
+- [Kubedoop Operator for Apache Kafka](https://github.com/zncdatadev/kafka-operator)
+- [Kubedoop Operator for Apache Spark](https://github.com/zncdatadev/spark-k8s-operator)
+- [Kubedoop Operator for Apache Superset](https://github.com/zncdatadev/superset-operator)
+- [Kubedoop Operator for Trino](https://github.com/zncdatadev/trino-operator)
+- [Kubedoop Operator for Apache Zookeeper](https://github.com/zncdatadev/zookeeper-operator)
+
+Kubedoop built-in operators:
+
+- [Commons Operator](https://github.com/zncdatadev/commons-operator)
+- [Listener Operator](https://github.com/zncdatadev/listener-operator)
+- [Secret Operator](https://github.com/zncdatadev/secret-operator)
+
+## Contributing
+
+If you'd like to contribute to Kubedoop, please refer to our [Contributing Guide](https://zncdata.dev/docs/developer-manual/collaboration) for more information.
+We welcome contributions of all kinds, including but not limited to code, documentation, and use cases.
+
+## License
+
+Copyright 2024.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
