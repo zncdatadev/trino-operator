@@ -56,8 +56,8 @@ func (in *BaseRoleSpec) DeepCopyInto(out *BaseRoleSpec) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.CommandArgsOverrides != nil {
-		in, out := &in.CommandArgsOverrides, &out.CommandArgsOverrides
+	if in.CliOverrides != nil {
+		in, out := &in.CliOverrides, &out.CliOverrides
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -541,8 +541,8 @@ func (in *RoleGroupSpec) DeepCopyInto(out *RoleGroupSpec) {
 		*out = new(ConfigSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CommandArgsOverrides != nil {
-		in, out := &in.CommandArgsOverrides, &out.CommandArgsOverrides
+	if in.CliOverrides != nil {
+		in, out := &in.CliOverrides, &out.CliOverrides
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

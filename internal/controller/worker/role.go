@@ -78,7 +78,7 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 			Labels:        info.GetLabels(),
 			Annotations:   info.GetAnnotations(),
 		},
-		CommandOverrides: spec.CommandArgsOverrides,
+		CommandOverrides: spec.CliOverrides,
 		EnvOverrides:     spec.EnvOverrides,
 	}
 
