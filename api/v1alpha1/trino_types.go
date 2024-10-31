@@ -145,7 +145,7 @@ type BaseRoleSpec struct {
 	Replicas *int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
+	CliOverrides []string `json:"cliOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
@@ -185,7 +185,7 @@ type RoleGroupSpec struct {
 	Config *ConfigSpec `json:"config,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	CommandArgsOverrides []string `json:"commandArgsOverrides,omitempty"`
+	CliOverrides []string `json:"cliOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
