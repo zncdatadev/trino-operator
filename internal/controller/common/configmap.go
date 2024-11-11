@@ -46,12 +46,13 @@ func NewConfigReconciler(
 		coordiantorSvcFqdn,
 		clusterConfig,
 		trinoConfig,
-		builder.Options{
-			ClusterName:   info.GetClusterName(),
-			RoleName:      info.GetRoleName(),
-			RoleGroupName: info.GetGroupName(),
-			Labels:        info.GetLabels(),
-			Annotations:   info.GetAnnotations(),
+		func(o builder.Option) builder.Option {
+			o.ClusterName = info.GetClusterName()
+			o.RoleName = info.GetRoleName()
+			o.RoleGroupName = info.GetGroupName()
+			o.Labels = info.GetLabels()
+			o.Annotations = info.GetAnnotations()
+			return o
 		},
 	)
 
@@ -84,22 +85,29 @@ func NewConfigMapBuilder(
 	coordinatorSvcFqdn string,
 	clusterConfig *trinosv1alpha1.ClusterConfigSpec,
 	trinoConfig *trinosv1alpha1.ConfigSpec,
-	options builder.Options,
+	options ...builder.Options,
 ) *ConfigMapBuilder {
+
+	opt := builder.Option{}
+
+	for _, o := range options {
+		opt = o(opt)
+	}
+
 	return &ConfigMapBuilder{
 		ConfigMapBuilder: *builder.NewConfigMapBuilder(
 			client,
 			name,
-			options.Labels,
-			options.Annotations,
+			opt.Labels,
+			opt.Annotations,
 		),
 		CoordiantorSvcFqdn: coordinatorSvcFqdn,
 		ClusterConfig:      clusterConfig,
 		TrinoConfig:        trinoConfig,
 
-		ClusterName:   options.ClusterName,
-		RoleName:      options.RoleName,
-		RoleGroupName: options.RoleGroupName,
+		ClusterName:   opt.ClusterName,
+		RoleName:      opt.RoleName,
+		RoleGroupName: opt.RoleGroupName,
 	}
 }
 
