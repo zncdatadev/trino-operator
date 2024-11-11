@@ -157,7 +157,7 @@ type BaseRoleSpec struct {
 	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	RoleConfig *commonsv1alpha1.RoleConfigSpec `json:"roleConfig,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	Config *ConfigSpec `json:"config,omitempty"`
@@ -204,9 +204,6 @@ type ConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	Affinity *corev1.Affinity `json:"affinity"`
 
-	// +kubebuilder:validation:Optional
-	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
-
 	// Use time.ParseDuration to parse the string
 	// +kubebuilder:validation:Optional
 	GracefulShutdownTimeout *string `json:"gracefulShutdownTimeout,omitempty"`
@@ -236,14 +233,6 @@ type ConfigOverridesSpec struct {
 	Config          map[string]string `json:"config.properties,omitempty"`
 	Log             map[string]string `json:"log.properties,omitempty"`
 	ExchangeManager map[string]string `json:"exchange-manager.properties,omitempty"`
-}
-
-type PodDisruptionBudgetSpec struct {
-	// +kubebuilder:validation:Optional
-	MinAvailable int32 `json:"minAvailable,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	MaxUnavailable int32 `json:"maxUnavailable,omitempty"`
 }
 
 type ImageSpec struct {
