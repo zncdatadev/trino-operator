@@ -367,13 +367,14 @@ helm-install-depends: ## Install the helm chart depends.
 		$(HELM) upgrade --install --create-namespace --namespace $(TEST_NAMESPACE) --wait $$dep kubedoop/$$dep --version $(VERSION); \
 	done
 
-.PHONY: helm-install
-helm-install: helm-install-depends ## Install the helm chart.
-	$(HELM) upgrade --install --create-namespace --namespace $(TEST_NAMESPACE) --wait $(PROJECT_NAME) kubedoop/$(PROJECT_NAME) --version $(VERSION)
-
-.PHONY: helm-uninstall
-helm-uninstall: ## Uninstall the helm chart.
-	$(HELM) uninstall --namespace $(TEST_NAMESPACE) $(PROJECT_NAME)
+## helm uninstall depends
+.PHONY: helm-uninstall-depends
+helm-uninstall-depends: ## Uninstall the helm chart depends.
+ifneq ($(strip $(HELM_DEPENDS)),)
+	for dep in $(HELM_DEPENDS); do \
+		$(HELM) uninstall --namespace $(TEST_NAMESPACE) $$dep; \
+	done
+endif
 
 ##@ E2E
 
@@ -445,7 +446,8 @@ $(CHAINSAW): $(LOCALBIN)
 chainsaw-setup: ## Run the chainsaw setup
 	make docker-build
 	$(KIND) --name $(KIND_CLUSTER_NAME) load docker-image $(IMG)
-	KUBECONFIG=$(KIND_KUBECONFIG) make helm-install
+	KUBECONFIG=$(KIND_KUBECONFIG) make helm-install-depends
+	KUBECONFIG=$(KIND_KUBECONFIG) make deploy
 
 .PHONY: chainsaw-test
 chainsaw-test: chainsaw ## Run the chainsaw test
@@ -453,4 +455,5 @@ chainsaw-test: chainsaw ## Run the chainsaw test
 
 .PHONY: chainsaw-cleanup
 chainsaw-cleanup: ## Run the chainsaw cleanup
-	KUBECONFIG=$(KIND_KUBECONFIG) make helm-uninstall
+	KUBECONFIG=$(KIND_KUBECONFIG) make helm-uninstall-depends
+	KUBECONFIG=$(KIND_KUBECONFIG) make undeploy
