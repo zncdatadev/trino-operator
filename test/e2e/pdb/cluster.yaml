@@ -1,0 +1,19 @@
+apiVersion: trino.zncdata.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: trino
+spec:
+  coordinators:
+    roleConfig:
+      podDisruptionBudget:
+        maxUnavailable: 1
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    roleConfig:
+      podDisruptionBudget:
+        maxUnavailable: 1
+    roleGroups:
+      default:
+        replicas: 1
