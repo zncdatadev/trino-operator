@@ -122,8 +122,8 @@ type TrinoCatalogStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // TrinoCatalog is the Schema for the trinocatalogs API
 type TrinoCatalog struct {
@@ -134,7 +134,7 @@ type TrinoCatalog struct {
 	Status TrinoCatalogStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // TrinoCatalogList contains a list of TrinoCatalog
 type TrinoCatalogList struct {
