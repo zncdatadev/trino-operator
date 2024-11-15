@@ -145,16 +145,6 @@ Temporary Items
 # dev container
 .devcontainer
 
-# olm
-bundle
-bundle.Dockerfile
-
-kind-kubeconfig*
-
-# catalog
-catalog
-catalog.Dockerfile
-
 # test
 *-local.yaml
 

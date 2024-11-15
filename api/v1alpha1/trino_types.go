@@ -46,8 +46,8 @@ const (
 	DefaultQueryMaxMemory = "50GB"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // TrinoCluster is the Schema for the trinoclusters API
 type TrinoCluster struct {
@@ -58,7 +58,7 @@ type TrinoCluster struct {
 	Status status.Status    `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // TrinoClusterList contains a list of TrinoCluster
 type TrinoClusterList struct {

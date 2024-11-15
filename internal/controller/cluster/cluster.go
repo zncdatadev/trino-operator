@@ -56,15 +56,22 @@ func (r *Reconciler) GetImage() *util.Image {
 }
 
 func (r *Reconciler) getCoordinatorSvcFqdn() string {
-	var fqdns []string
+	var fqdns []string = make([]string, 0)
 	coordinator := r.Spec.Coordinators
-	// "coordinator-"+name+"."+r.Client.GetOwnerNamespace()+".svc.cluster.local"
-	for name := range coordinator.RoleGroups {
-		roleGroupInfo := reconciler.RoleGroupInfo{RoleInfo: reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "coordinator"}, RoleGroupName: name}
-		fqdns = append(fqdns, strings.Join([]string{roleGroupInfo.GetFullName(), r.Client.GetOwnerNamespace(), "svc.cluster.local"}, "."))
+
+	if coordinator.RoleGroups != nil {
+		// "coordinator-"+name+"."+r.Client.GetOwnerNamespace()+".svc.cluster.local"
+		for name := range coordinator.RoleGroups {
+			roleGroupInfo := reconciler.RoleGroupInfo{RoleInfo: reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "coordinator"}, RoleGroupName: name}
+			fqdns = append(fqdns, strings.Join([]string{roleGroupInfo.GetFullName(), r.Client.GetOwnerNamespace(), "svc.cluster.local"}, "."))
+		}
 	}
-	// Currently, we only support one coordinator
-	return fqdns[0]
+
+	// Ensure there is at least one coordinator
+	if len(fqdns) > 0 {
+		return fqdns[0]
+	}
+	return ""
 }
 
 func (r *Reconciler) RegisterResources(ctx context.Context) error {
