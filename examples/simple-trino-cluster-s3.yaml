@@ -1,0 +1,94 @@
+# helm install commons-operator commons-operator --repo https://zncdatadev.github.io/kubedoop-helm-charts/
+# helm install hive-operator hive-operator --repo https://zncdatadev.github.io/kubedoop-helm-charts/
+# helm install minio minio --repo https://charts.bitnami.com/bitnami --set auth.rootUser=minio-access-key --set auth.rootPassword=minio-secret-key
+---
+apiVersion: trino.kubedoop.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: simple-trino
+spec:
+  image:
+    productVersion: "455"
+  clusterConfig:
+    catalogLabelSelector:
+      matchLabels:
+        trino: simple-trino
+  coordinators:
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    roleGroups:
+      default:
+        replicas: 1
+---
+apiVersion: trino.kubedoop.dev/v1alpha1
+kind: TrinoCatalog
+metadata:
+  name: hive
+  labels:
+    trino: simple-trino
+spec:
+  connector:
+    hive:
+      metastore:
+        configMap: simple-hive-derby
+      s3:
+        reference: minio
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hive-credentials
+type: Opaque
+stringData:
+  username: APP
+  password: mine
+---
+apiVersion: hive.kubedoop.dev/v1alpha1
+kind: HiveCluster
+metadata:
+  name: simple-hive-derby
+spec:
+  image:
+    productVersion: 4.0.0
+  clusterConfig:
+    database:
+      connString: jdbc:derby:;databaseName=/tmp/metastore_db;create=true
+      credentialsSecret: hive-credentials
+      dbType: derby
+  metastore:
+    roleGroups:
+      default:
+        replicas: 1
+---
+apiVersion: s3.kubedoop.dev/v1alpha1
+kind: S3Connection
+metadata:
+  name: minio
+spec:
+  host: minio
+  port: 9000
+  accessStyle: Path
+  credentials:
+    secretClass: simple-s3-credentials-secret-class
+---
+apiVersion: secrets.kubedoop.dev/v1alpha1
+kind: SecretClass
+metadata:
+  name: simple-s3-credentials-secret-class
+spec:
+  backend:
+    k8sSearch:
+      searchNamespace:
+        pod: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: simple-s3-credentials-secret
+  labels:
+    secrets.kubedoop.dev/class: simple-s3-credentials-secret-class
+stringData:
+  accessKey: minio-access-key
+  secretKey: minio-secret-key
