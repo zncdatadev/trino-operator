@@ -38,10 +38,10 @@ type TrinoReconciler struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinocatalogs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=trino.zncdata.dev,resources=trinoclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=trino.kubedoop.dev,resources=trinocatalogs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=trino.kubedoop.dev,resources=trinoclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=trino.kubedoop.dev,resources=trinoclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=trino.kubedoop.dev,resources=trinoclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete

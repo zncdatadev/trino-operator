@@ -1,13 +1,13 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: trino-coordinator
+  name: trino-pdb-coordinator
 spec:
   maxUnavailable: 1
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: trino-worker
+  name: trino-pdb-worker
 spec:
   maxUnavailable: 1

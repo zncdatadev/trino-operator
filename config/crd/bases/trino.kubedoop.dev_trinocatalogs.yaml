@@ -3,10 +3,10 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.2
-  name: trinocatalogs.trino.zncdata.dev
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: trinocatalogs.trino.kubedoop.dev
 spec:
-  group: trino.zncdata.dev
+  group: trino.kubedoop.dev
   names:
     kind: TrinoCatalog
     listKind: TrinoCatalogList

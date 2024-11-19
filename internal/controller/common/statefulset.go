@@ -44,8 +44,23 @@ func NewStatefulSetReconciler(
 	stopped bool,
 	replicas *int32,
 	ports []corev1.ContainerPort,
-	options builder.WorkloadOptions,
+	overrides *commonsv1alpha1.OverridesSpec,
+	roleGroupConfig *trinosv1alpha1.ConfigSpec,
+	options ...builder.Option,
 ) (*reconciler.StatefulSet, error) {
+
+	opts := &builder.Options{}
+
+	for _, o := range options {
+		o(opts)
+	}
+
+	var commonsRoleGroupConfig *commonsv1alpha1.RoleGroupConfigSpec
+
+	if roleGroupConfig != nil {
+		commonsRoleGroupConfig = roleGroupConfig.RoleGroupConfigSpec
+	}
+
 	builder := NewStatefulSetBuilder(
 		client,
 		roleGroupInfo.GetFullName(),
@@ -53,12 +68,13 @@ func NewStatefulSetReconciler(
 		image,
 		clusterConfig,
 		ports,
-		options,
+		overrides,
+		commonsRoleGroupConfig,
+		options...,
 	)
 
 	return reconciler.NewStatefulSet(
 		client,
-		roleGroupInfo.GetFullName(),
 		builder,
 		stopped,
 	), nil
@@ -84,19 +100,29 @@ func NewStatefulSetBuilder(
 	image *util.Image,
 	clusterConfig *trinosv1alpha1.ClusterConfigSpec,
 	ports []corev1.ContainerPort,
-	options builder.WorkloadOptions,
+	overrides *commonsv1alpha1.OverridesSpec,
+	roleGroupConfig *commonsv1alpha1.RoleGroupConfigSpec,
+	options ...builder.Option,
 ) *StatefulSetBuilder {
+
+	opts := &builder.Options{}
+	for _, o := range options {
+		o(opts)
+	}
+
 	return &StatefulSetBuilder{
 		StatefulSet: *builder.NewStatefulSetBuilder(
 			client,
 			name,
 			replicas,
 			image,
-			options,
+			overrides,
+			roleGroupConfig,
+			options...,
 		),
 		ClusterConfig: clusterConfig,
-		RoleName:      options.RoleName,
-		ClusterName:   options.ClusterName,
+		RoleName:      opts.RoleName,
+		ClusterName:   opts.ClusterName,
 		Image:         image,
 		ports:         ports,
 	}

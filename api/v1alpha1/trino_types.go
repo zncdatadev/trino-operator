@@ -144,17 +144,7 @@ type BaseRoleSpec struct {
 	// +kubebuilder:default:=1
 	Replicas *int32 `json:"replicas"`
 
-	// +kubebuilder:validation:Optional
-	CliOverrides []string `json:"cliOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
-
-	// // +kubebuilder:validation:Optional
-	// PodOverride corev1.PodSpec `json:"podOverride,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
+	*commonsv1alpha1.OverridesSpec `json:",inline"`
 
 	// +kubebuilder:validation:Optional
 	RoleConfig *commonsv1alpha1.RoleConfigSpec `json:"roleConfig,omitempty"`
@@ -184,32 +174,11 @@ type RoleGroupSpec struct {
 
 	Config *ConfigSpec `json:"config,omitempty"`
 
-	// +kubebuilder:validation:Optional
-	CliOverrides []string `json:"cliOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	ConfigOverrides *ConfigOverridesSpec `json:"configOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	EnvOverrides map[string]string `json:"envOverrides,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// PodOverride *corev1.PodTemplateSpec `json:"podOverride,omitempty"`
+	*commonsv1alpha1.OverridesSpec `json:",inline"`
 }
 
 type ConfigSpec struct {
-	// +kubebuilder:validation:Optional
-	Resources *commonsv1alpha1.ResourcesSpec `json:"resources,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Affinity *corev1.Affinity `json:"affinity"`
-
-	// Use time.ParseDuration to parse the string
-	// +kubebuilder:validation:Optional
-	GracefulShutdownTimeout *string `json:"gracefulShutdownTimeout,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	Logging *LoggingSpec `json:"logging,omitempty"`
+	*commonsv1alpha1.RoleGroupConfigSpec `json:",inline"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="50GB"

@@ -2,8 +2,8 @@ package coordinator
 
 import (
 	"context"
-	"time"
 
+	commonsv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/commons/v1alpha1"
 	"github.com/zncdatadev/operator-go/pkg/builder"
 	"github.com/zncdatadev/operator-go/pkg/client"
 	"github.com/zncdatadev/operator-go/pkg/reconciler"
@@ -43,11 +43,19 @@ func NewWorkerReconciler(
 
 func (r *Reconciler) RegisterResources(ctx context.Context) error {
 	for name, roleGroup := range r.Spec.RoleGroups {
-		mergedRoleGroup := r.MergeRoleGroupSpec(roleGroup)
+		mergedConfig, err := util.MergeObject(r.Spec.Config, roleGroup.Config)
+		if err != nil {
+			return err
+		}
+
+		mergedOverrides, err := util.MergeObject(r.Spec.OverridesSpec, roleGroup.OverridesSpec)
+		if err != nil {
+			return err
+		}
 
 		info := reconciler.RoleGroupInfo{RoleInfo: r.RoleInfo, RoleGroupName: name}
 
-		reconcilers, err := r.registerResourceWithRoleGroup(ctx, info, mergedRoleGroup)
+		reconcilers, err := r.registerResourceWithRoleGroup(info, mergedConfig, mergedOverrides, roleGroup.Replicas)
 		if err != nil {
 			return err
 		}
@@ -60,8 +68,12 @@ func (r *Reconciler) RegisterResources(ctx context.Context) error {
 	return nil
 }
 
-func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info reconciler.RoleGroupInfo, roleGroupSpec any) ([]reconciler.Reconciler, error) {
-	spec := roleGroupSpec.(*trinov1alpha1.RoleGroupSpec)
+func (r *Reconciler) registerResourceWithRoleGroup(
+	info reconciler.RoleGroupInfo,
+	roleGroupConfig *trinov1alpha1.ConfigSpec,
+	overrideSpec *commonsv1alpha1.OverridesSpec,
+	replicas *int32,
+) ([]reconciler.Reconciler, error) {
 	var reconcilers []reconciler.Reconciler
 
 	ports := []corev1.ContainerPort{{Name: "http", ContainerPort: trinov1alpha1.HttpPort}}
@@ -70,36 +82,11 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 		ports = []corev1.ContainerPort{{Name: "https", ContainerPort: trinov1alpha1.HttpsPort}}
 	}
 
-	options := builder.WorkloadOptions{
-		Option: builder.Option{
-			ClusterName:   info.GetClusterName(),
-			RoleName:      info.GetRoleName(),
-			RoleGroupName: info.RoleGroupName,
-			Labels:        info.GetLabels(),
-			Annotations:   info.GetAnnotations(),
-		},
-		CliOverrides: spec.CliOverrides,
-		EnvOverrides: spec.EnvOverrides,
-	}
-
-	if spec.Config != nil {
-		if spec.Config.GracefulShutdownTimeout != nil {
-			gracefulShutdownTimeout, err := time.ParseDuration(*spec.Config.GracefulShutdownTimeout)
-			if err != nil {
-				return nil, err
-			}
-			options.TerminationGracePeriod = &gracefulShutdownTimeout
-		}
-
-		options.Resource = spec.Config.Resources
-		options.Affinity = spec.Config.Affinity
-	}
-
 	configMapReconciler := common.NewConfigReconciler(
 		r.Client,
 		r.CoordiantorSvcFqdn,
 		r.ClusterConfig,
-		spec.Config,
+		roleGroupConfig,
 		info,
 	)
 
@@ -109,13 +96,6 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 		r.Client,
 		info.GetFullName(),
 		ports,
-		func(sbo *builder.ServiceBuilderOption) {
-			sbo.Labels = info.GetLabels()
-			sbo.Annotations = info.GetAnnotations()
-			sbo.ClusterName = info.GetClusterName()
-			sbo.RoleName = info.GetRoleName()
-			sbo.RoleGroupName = info.RoleGroupName
-		},
 	)
 	reconcilers = append(reconcilers, serviceReconciler)
 
@@ -124,10 +104,18 @@ func (r *Reconciler) registerResourceWithRoleGroup(_ context.Context, info recon
 		r.ClusterConfig,
 		info,
 		r.Image,
-		r.ClusterStopped,
-		spec.Replicas,
+		r.ClusterStopped(),
+		replicas,
 		ports,
-		options,
+		overrideSpec,
+		roleGroupConfig,
+		func(o *builder.Options) {
+			o.ClusterName = info.GetClusterName()
+			o.RoleName = info.GetRoleName()
+			o.RoleGroupName = info.GetGroupName()
+			o.Labels = info.GetLabels()
+			o.Annotations = info.GetAnnotations()
+		},
 	)
 	if err != nil {
 		return nil, err

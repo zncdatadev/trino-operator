@@ -62,7 +62,6 @@ func NewInternalsharedSecretReconciler(
 	return &InternalSharedSecretReconciler{
 		GenericResourceReconciler: *reconciler.NewGenericResourceReconciler(
 			client,
-			name,
 			builder,
 		),
 	}
@@ -73,7 +72,7 @@ func NewInternalsharedSecretReconciler(
 func (r *InternalSharedSecretReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
 	if err := r.Client.Client.Get(
 		ctx,
-		ctrlclient.ObjectKey{Namespace: r.Client.GetOwnerNamespace(), Name: r.Name},
+		ctrlclient.ObjectKey{Namespace: r.Client.GetOwnerNamespace(), Name: r.GetBuilder().GetName()},
 		&corev1.Secret{},
 	); err != nil {
 		if ctrlclient.IgnoreNotFound(err) != nil {

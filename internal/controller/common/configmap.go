@@ -46,19 +46,17 @@ func NewConfigReconciler(
 		coordiantorSvcFqdn,
 		clusterConfig,
 		trinoConfig,
-		func(o builder.Option) builder.Option {
-			o.ClusterName = info.GetClusterName()
-			o.RoleName = info.GetRoleName()
-			o.RoleGroupName = info.GetGroupName()
-			o.Labels = info.GetLabels()
+		func(o *builder.Options) {
+			o.ClusterName = info.ClusterName
+			o.RoleName = info.RoleName
+			o.RoleGroupName = info.RoleGroupName
 			o.Annotations = info.GetAnnotations()
-			return o
+			o.Labels = info.GetLabels()
 		},
 	)
 
 	return reconciler.NewGenericResourceReconciler(
 		client,
-		info.GetFullName(),
 		builder,
 	)
 }
@@ -85,29 +83,29 @@ func NewConfigMapBuilder(
 	coordinatorSvcFqdn string,
 	clusterConfig *trinosv1alpha1.ClusterConfigSpec,
 	trinoConfig *trinosv1alpha1.ConfigSpec,
-	options ...builder.Options,
+	options ...builder.Option,
 ) *ConfigMapBuilder {
 
-	opt := builder.Option{}
+	opts := &builder.Options{}
 
 	for _, o := range options {
-		opt = o(opt)
+		o(opts)
 	}
 
 	return &ConfigMapBuilder{
 		ConfigMapBuilder: *builder.NewConfigMapBuilder(
 			client,
 			name,
-			opt.Labels,
-			opt.Annotations,
+			opts.Labels,
+			opts.Annotations,
 		),
 		CoordiantorSvcFqdn: coordinatorSvcFqdn,
 		ClusterConfig:      clusterConfig,
 		TrinoConfig:        trinoConfig,
 
-		ClusterName:   opt.ClusterName,
-		RoleName:      opt.RoleName,
-		RoleGroupName: opt.RoleGroupName,
+		ClusterName:   opts.ClusterName,
+		RoleName:      opts.RoleName,
+		RoleGroupName: opts.RoleGroupName,
 	}
 }
 

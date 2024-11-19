@@ -1,4 +1,4 @@
-apiVersion: trino.zncdata.dev/v1alpha1
+apiVersion: trino.kubedoop.dev/v1alpha1
 kind: TrinoCatalog
 metadata:
   labels:

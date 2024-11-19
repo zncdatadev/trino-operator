@@ -1,7 +1,7 @@
-apiVersion: trino.zncdata.dev/v1alpha1
+apiVersion: trino.kubedoop.dev/v1alpha1
 kind: TrinoCluster
 metadata:
-  name: trino
+  name: trino-default
 spec:
   coordinators:
     roleGroups:

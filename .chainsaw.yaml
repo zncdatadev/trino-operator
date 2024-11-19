@@ -3,6 +3,7 @@ kind: Configuration
 metadata:
   name: custom-config
 spec:
+  namespace: chainsaw
   timeouts:
     apply: 120s
     assert: 120s
