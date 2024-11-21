@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: trino-coordinator-default
+  name: trino-pdb-coordinator-default
 status:
   availableReplicas: 1
   currentReplicas: 1
@@ -12,7 +12,7 @@ status:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: trino-worker-default
+  name: trino-pdb-worker-default
 status:
   availableReplicas: 1
   currentReplicas: 1

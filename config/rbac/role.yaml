@@ -42,7 +42,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - trino.zncdata.dev
+  - trino.kubedoop.dev
   resources:
   - trinocatalogs
   - trinoclusters
@@ -55,13 +55,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - trino.zncdata.dev
+  - trino.kubedoop.dev
   resources:
   - trinoclusters/finalizers
   verbs:
   - update
 - apiGroups:
-  - trino.zncdata.dev
+  - trino.kubedoop.dev
   resources:
   - trinoclusters/status
   verbs:

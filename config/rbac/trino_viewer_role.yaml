@@ -12,7 +12,7 @@ metadata:
   name: trinocluster-viewer-role
 rules:
 - apiGroups:
-  - trino.zncdata.dev
+  - trino.kubedoop.dev
   resources:
   - trinoclusters
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - trino.zncdata.dev
+  - trino.kubedoop.dev
   resources:
   - trinoclusters/status
   verbs:

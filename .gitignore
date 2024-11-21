@@ -149,3 +149,5 @@ Temporary Items
 *-local.yaml
 
 **/__debug_bin**
+
+kind-kubeconfig*

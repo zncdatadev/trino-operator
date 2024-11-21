@@ -127,12 +127,13 @@ func (r *Reconciler) RegisterResources(ctx context.Context) error {
 		r.Client,
 		coordinatorRoleInfo.GetFullName(),
 		[]corev1.ContainerPort{containerPort},
-		func(sbo *builder.ServiceBuilderOption) {
-			sbo.Labels = coordinatorRoleInfo.GetLabels()
-			sbo.Annotations = coordinatorRoleInfo.GetAnnotations()
-			sbo.ClusterName = coordinatorRoleInfo.GetClusterName()
-			sbo.RoleName = coordinatorRoleInfo.GetRoleName()
-			sbo.ListenerClass = listenerClass
+		func(o *builder.ServiceBuilderOptions) {
+			o.Labels = coordinatorRoleInfo.GetLabels()
+			o.Annotations = coordinatorRoleInfo.GetAnnotations()
+			o.ClusterName = r.ClusterInfo.GetClusterName()
+			o.RoleName = coordinatorRoleInfo.RoleName
+			o.ListenerClass = listenerClass
+			o.MatchingLabels = coordinatorRoleInfo.GetLabels()
 		},
 	)
 	r.AddResource(serviceReconciler)
