@@ -54,8 +54,11 @@ func NewInternalsharedSecretReconciler(
 		SecretBuilder: *builder.NewSecretBuilder(
 			client,
 			name,
-			info.GetLabels(),
-			info.GetAnnotations(),
+			func(o *builder.Options) {
+				o.ClusterName = info.GetClusterName()
+				o.Annotations = info.GetAnnotations()
+				o.Labels = info.GetLabels()
+			},
 		),
 	}
 

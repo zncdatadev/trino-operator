@@ -96,8 +96,7 @@ func NewConfigMapBuilder(
 		ConfigMapBuilder: *builder.NewConfigMapBuilder(
 			client,
 			name,
-			opts.Labels,
-			opts.Annotations,
+			options...,
 		),
 		CoordiantorSvcFqdn: coordinatorSvcFqdn,
 		ClusterConfig:      clusterConfig,
