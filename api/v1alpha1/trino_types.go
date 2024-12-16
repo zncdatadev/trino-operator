@@ -95,6 +95,10 @@ type ClusterConfigSpec struct {
 	CatalogLabelSelector *CatalogLabelSelectorSpec `json:"catalogLabelSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// TODO: to use CatalogLabelSelector instead, as it is under construction, we will use CatalogProperties for now
+	CatalogProperties map[string]map[string]string `json:"catalogProperties,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="cluster-internal"
 	ListenerClass constants.ListenerClass `json:"listenerClass,omitempty"`
 
@@ -181,10 +185,11 @@ type ConfigSpec struct {
 	*commonsv1alpha1.RoleGroupConfigSpec `json:",inline"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="50GB"
+	// +kubebuilder:default:="5GB"
 	QueryMaxMemory string `json:"queryMaxMemory,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="1000MB"
 	QueryMaxMemoryPerNode string `json:"queryMaxMemoryPerNode,omitempty"`
 }
 
