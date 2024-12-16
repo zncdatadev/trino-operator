@@ -1,0 +1,151 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: authentication
+spec:
+  bindings:
+  - name: ldap_admin_username
+    value: admin
+  - name: ldap_admin_password
+    value: admin
+  - name: ldap_testing_user
+    value: integrationtest
+  - name: ldap_testing_password
+    value: integrationtest
+  - name: keycloak_realm
+    value: kubedoop
+  - name: keycloak_client_id
+    value: auth2-proxy
+  - name: keycloak_client_secret
+    value: auth2-proxy
+  - name: keycloak_user
+    value: user
+  - name: keycloak_password
+    value: password
+  steps:
+  - name: install openldap
+    try:
+    - apply:
+        file: openldap-install.yaml
+    - assert:
+        file: openldap-assert.yaml
+  - name: add ldap users
+    try:
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        - name: LDAP_TESTING_USER
+          value: ($ldap_testing_user)
+        - name: LDAP_TESTING_PASSWORD
+          value: ($ldap_testing_password)
+        content: |-
+          LDAP_COMMANDS=$(cat << 'EOF'
+          cat << EOL | ldapadd -H ldap://localhost:1389 -D cn=admin,dc=example,dc=org -w admin
+          dn: cn=${LDAP_TESTING_USER},ou=users,dc=example,dc=org
+          objectClass: inetOrgPerson
+          objectClass: posixAccount
+          objectClass: shadowAccount
+          cn: ${LDAP_TESTING_USER}
+          uid: ${LDAP_TESTING_USER}
+          givenName: Kubedoop
+          sn: Integration-Test
+          mail: ${LDAP_TESTING_USER}@kubedoop.dev
+          uidNumber: 16842
+          gidNumber: 100
+          homeDirectory: /home/${LDAP_TESTING_USER}
+          loginShell: /bin/bash
+          userPassword: {crypt}x
+          shadowLastChange: 0
+          shadowMax: 0
+          shadowWarning: 0
+          EOL
+
+          ldappasswd -H ldap://localhost:1389 -D cn=admin,dc=example,dc=org -w admin -s ${LDAP_TESTING_PASSWORD} "cn=${LDAP_TESTING_USER},ou=users,dc=example,dc=org"
+          EOF
+          )
+
+          # Execute the LDAP commands in the openldap-0 container
+          echo "Creating the LDAP user ${LDAP_TESTING_USER} in the LDAP server"
+          kubectl -n $NAMESPACE exec -i openldap-0 -- /bin/bash -c "export LDAP_TESTING_USER=$LDAP_TESTING_USER;export LDAP_TESTING_PASSWORD=$LDAP_TESTING_PASSWORD; bash -c '$LDAP_COMMANDS'"
+  - name: assert ldap user login
+    try:
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        - name: LDAP_TESTING_USER
+          value: ($ldap_testing_user)
+        - name: LDAP_TESTING_PASSWORD
+          value: ($ldap_testing_password)
+        content: |-
+          # Verify the LDAP user login
+          echo "Verifying the LDAP user login by ldapwhoami, should return 'dn:cn=${LDAP_TESTING_USER},ou=users,dc=example,dc=org'"
+          kubectl -n $NAMESPACE exec -i openldap-0 -- ldapwhoami -H ldap://localhost:1389 -D cn=${LDAP_TESTING_USER},ou=users,dc=example,dc=org -w $LDAP_TESTING_PASSWORD
+  - name: install keycloak
+    try:
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        - name: KEYCLOAK_REALM
+          value: ($keycloak_realm)
+        - name: KEYCLOAK_USER
+          value: ($keycloak_user)
+        - name: KEYCLOAK_PASSWORD
+          value: ($keycloak_password)
+        - name: KEYCLOAK_CLIENT_ID
+          value: ($keycloak_client_id)
+        - name: KEYCLOAK_CLIENT_SECRET
+          value: ($keycloak_client_secret)
+        content: |
+          cat keycloak-config.yaml | envsubst | kubectl apply -n $NAMESPACE -f -
+    - apply:
+        file: keycloak-install.yaml
+    - assert:
+        file: keycloak-assert.yaml
+  - name: deploy authentication classes
+    try:
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        - name: KEYCLOAK_REALM
+          value: ($keycloak_realm)
+        - name: KEYCLOAK_CLIENT_ID
+          value: ($keycloak_client_id)
+        - name: KEYCLOAK_CLIENT_SECRET
+          value: ($keycloak_client_secret)
+        - name: LDAP_TESTING_USER
+          value: ($ldap_testing_user)
+        - name: LDAP_TESTING_PASSWORD
+          value: ($ldap_testing_password)
+        content: |
+          echo "Deploying the Trino with OpenLDAP authentication class"
+          eval "echo \"$(cat openldap-authenticationclass.yaml)\"" | kubectl apply -n $NAMESPACE -f -
+
+          echo "Deploying the Trino with Keycloak authentication class"
+          eval "echo \"$(cat keycloak-authenticationclass.yaml)\"" | kubectl apply -n $NAMESPACE -f -
+    - assert:
+        file: authenticationclass-assert.yaml
+  - name: install trino cluster
+    try:
+    - apply:
+        file: trino.yaml
+    - assert:
+        file: trino-assert.yaml
+  - name: test trino oidc authentication
+    try:
+      - apply:
+          file: testing-tools-install.yaml
+      - assert:
+          file: testing-tools-assert.yaml
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+          content: |
+            kubectl -n $NAMESPACE cp oidc-login-assert.py testing-tools-0:/tmp/oidc-login-assert.py
+
+            kubectl exec -n $NAMESPACE testing-tools-0 -- python /tmp/oidc-login-assert.py https://test-trino-coordinator-default.$NAMESPACE.svc.cluster.local:8443/ui/
+  # TODO: Add more tests for LDAP authentication, but for now, we only test OIDC authentication, the ldap authentication is not working yet

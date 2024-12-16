@@ -1,0 +1,26 @@
+apiVersion: authentication.kubedoop.dev/v1alpha1
+kind: AuthenticationClass
+metadata:
+  name: oidc-keycloak
+spec:
+  provider:
+    oidc:
+      hostname: keycloak.$NAMESPACE.svc.cluster.local
+      port: 80
+      rootPath: /realms/$KEYCLOAK_REALM
+      providerHint: keycloak
+      scopes:
+        - openid
+        - email
+        - profile
+      principalClaim: preferred_username
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oidc-secret
+  namespace: $NAMESPACE
+type: kubernetes.io/opaque
+stringData:
+  CLIENT_ID: $KEYCLOAK_CLIENT_ID
+  CLIENT_SECRET: $KEYCLOAK_CLIENT_SECRET
