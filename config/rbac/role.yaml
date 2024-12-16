@@ -8,6 +8,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
   - services
   verbs:
   - create
@@ -28,6 +29,14 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - authentication.kubedoop.dev
+  resources:
+  - authenticationclasses
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - policy
