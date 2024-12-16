@@ -136,19 +136,26 @@ func (b *StatefulSetBuilder) Build(ctx context.Context) (ctrlclient.Object, erro
 		return nil, err
 	}
 	b.AddVolumes(volumes)
-	b.AddContainer(b.getMainContainer())
+
+	container, err := b.getMainContainer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	b.AddContainer(container)
 	obj, err := b.GetObject()
 	if err != nil {
 		return nil, err
 	}
 	if b.ClusterConfig != nil && b.ClusterConfig.VectorAggregatorConfigMapName != "" {
-		builder.NewVectorDecorator(
+		decorator := builder.NewVectorDecorator(
 			obj,
 			b.Image,
 			TrinoLogVolumeName,
 			TrinoConfigVolumeName,
 			b.ClusterConfig.VectorAggregatorConfigMapName)
-
+		if err := decorator.Decorate(); err != nil {
+			return nil, err
+		}
 	}
 	return obj, nil
 }
@@ -157,38 +164,67 @@ func (b *StatefulSetBuilder) enabledTls() bool {
 	return b.ClusterConfig != nil && b.ClusterConfig.Tls != nil
 }
 
-func (b *StatefulSetBuilder) getMainContainer() *corev1.Container {
+func (b *StatefulSetBuilder) getMainContainer(ctx context.Context) (*corev1.Container, error) {
 	container := builder.NewContainer(b.RoleName, b.Image)
 	container.SetCommand([]string{"sh", "-c"})
 
-	args, err := b.getMainContainerArgs(context.Background())
+	args, err := b.getMainContainerArgs(ctx)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	container.SetArgs(args)
 
-	volumeMounts, err := b.getMainContainerVolumeMounts(context.Background())
+	volumeMounts, err := b.getMainContainerVolumeMounts(ctx)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	container.AddVolumeMounts(volumeMounts)
 	if b.enabledTls() {
 		container.AddEnvFromSecret(getInternalSharedSecretName(b.ClusterName))
 	}
+	envVars, err := b.getMainContainerEnvVars(ctx)
+	if err != nil {
+		return nil, err
+	}
+	container.AddEnvVars(envVars)
 	container.AddPorts(b.ports)
-	container.SetLivenessProbe(&corev1.Probe{
+
+	portName := "http"
+	schema := corev1.URISchemeHTTP
+	if b.enabledTls() {
+		portName = "https"
+		schema = corev1.URISchemeHTTPS
+	}
+	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
-			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromString(b.ports[0].Name),
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/v1/info",
+				Port:   intstr.FromString(portName),
+				Scheme: schema,
 			},
 		},
 		InitialDelaySeconds: 30,
-		TimeoutSeconds:      1,
+		TimeoutSeconds:      5,
 		PeriodSeconds:       10,
-		FailureThreshold:    3,
-	})
+		FailureThreshold:    6,
+		SuccessThreshold:    1,
+	}
+	container.SetLivenessProbe(probe)
+	container.SetReadinessProbe(probe)
+	return container.Build(), nil
+}
 
-	return container.Build()
+func (b *StatefulSetBuilder) getMainContainerEnvVars(ctx context.Context) ([]corev1.EnvVar, error) {
+	envVars := make([]corev1.EnvVar, 0)
+	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil {
+		auth, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
+		if err != nil {
+			return nil, err
+		}
+		envVars = append(envVars, auth.GetEnvVars()...)
+	}
+
+	return envVars, nil
 }
 
 func (b *StatefulSetBuilder) getMainContainerArgs(ctx context.Context) ([]string, error) {
@@ -207,6 +243,17 @@ func (b *StatefulSetBuilder) getMainContainerArgs(ctx context.Context) ([]string
 set -ex
 mkdir -p ` + TrinoConfigDir + `
 cp ` + path.Join(TrinoConfigMountDir, "*") + ` ` + TrinoConfigDir + `
+
+# TODO: remove this in futrue ,Move catalog files to catalog directory
+mkdir -p ` + TrinoConfigDir + "catalog" + `
+for f in ` + path.Join(TrinoConfigDir, "catalog-*") + `; do
+  if [ -f "$f" ]; then
+	echo "Moving $f to catalog directory"
+    filename=$(basename "$f")
+    newname=$(echo "$filename" | sed 's/^catalog-//')
+    mv "$f" ` + path.Join(TrinoConfigDir, "catalog", "$newname") + `
+  fi
+done
 
 prepare_signal_handlers()
 {
