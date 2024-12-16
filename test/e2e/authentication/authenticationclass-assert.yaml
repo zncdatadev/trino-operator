@@ -1,0 +1,10 @@
+---
+apiVersion: authentication.kubedoop.dev/v1alpha1
+kind: AuthenticationClass
+metadata:
+  name: oidc-keycloak
+---
+apiVersion: authentication.kubedoop.dev/v1alpha1
+kind: AuthenticationClass
+metadata:
+  name: openldap
