@@ -231,7 +231,7 @@ mv $(1) $(1)-$(3) ;\
 ln -sf $(1)-$(3) $(1)
 endef
 
-HELM_DEPENDS ?=  commons-operator listener-operator secret-operator
+HELM_DEPENDS ?=  commons-operator listener-operator secret-operator zookeeper-operator hive-operator hdfs-operator
 TEST_NAMESPACE = kubedoop-operators
 
 .PHONY: helm-install-depends
@@ -257,6 +257,8 @@ endif
 # Tool Versions
 KINDTEST_K8S_VERSION ?= 1.26.15
 CHAINSAW_VERSION ?= v0.2.11
+PRODUCT_VERSION ?= 451
+
 
 KIND_IMAGE ?= kindest/node:v${KINDTEST_K8S_VERSION}
 KIND_KUBECONFIG ?= ./kind-kubeconfig-$(KINDTEST_K8S_VERSION)
@@ -310,7 +312,7 @@ chainsaw-setup: ## Run the chainsaw setup
 
 .PHONY: chainsaw-test
 chainsaw-test: chainsaw ## Run the chainsaw test
-	KUBECONFIG=$(KIND_KUBECONFIG) $(CHAINSAW) test --cluster cluster-1=$(KIND_KUBECONFIG) --test-dir ./test/e2e/
+	echo "product_version: $(PRODUCT_VERSION)" | KUBECONFIG=$(KIND_KUBECONFIG) $(CHAINSAW) test --cluster cluster-1=$(KIND_KUBECONFIG) --test-dir ./test/e2e/ --values -
 
 .PHONY: chainsaw-cleanup
 chainsaw-cleanup: ## Run the chainsaw cleanup
