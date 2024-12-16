@@ -1,0 +1,18 @@
+apiVersion: trino.kubedoop.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: test-trino
+spec:
+  image:
+    productVersion: ($values.product_version)
+  clusterOperation:
+    reconciliationPaused: ($cluster_paused)
+    stopped: ($cluster_stopped)
+  coordinators:
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    roleGroups:
+      default:
+        replicas: 1

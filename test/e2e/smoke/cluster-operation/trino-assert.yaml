@@ -1,0 +1,16 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-trino-coordinator-default
+status:
+  availableReplicas: ($available_replicas)
+  replicas: ($available_replicas)
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-trino-worker-default
+status:
+  availableReplicas: ($available_replicas)
+  replicas: ($available_replicas)
