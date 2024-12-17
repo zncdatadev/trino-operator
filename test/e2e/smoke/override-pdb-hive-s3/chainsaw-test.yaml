@@ -34,6 +34,23 @@ spec:
         file: hive.yaml
     - assert:
         file: hive-assert.yaml
+    catch:
+      - sleep:
+          duration: 5s
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+          content: |
+            set -ex
+            kubectl -n $NAMESPACE get pods
+      - describe:
+          apiVersion: v1
+          kind: Pod
+          selector: app.kubernetes.io/instance=test-hive
+      - podLogs:
+          selector: app.kubernetes.io/instance=test-hive
+          tail: -1
   - name: install trino
     try:
       - apply:
