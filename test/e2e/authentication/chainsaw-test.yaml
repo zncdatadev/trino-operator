@@ -103,6 +103,7 @@ spec:
     - apply:
         file: keycloak-install.yaml
     - assert:
+        timeout: 4m
         file: keycloak-assert.yaml
   - name: deploy authentication classes
     try:
