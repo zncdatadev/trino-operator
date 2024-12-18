@@ -1,19 +1,18 @@
 apiVersion: trino.kubedoop.dev/v1alpha1
 kind: TrinoCluster
 metadata:
-  name: trino-pdb
+  name: test-trino
 spec:
+  image:
+    productVersion: ($values.product_version)
+  clusterOperation:
+    reconciliationPaused: ($cluster_paused)
+    stopped: ($cluster_stopped)
   coordinators:
-    roleConfig:
-      podDisruptionBudget:
-        maxUnavailable: 1
     roleGroups:
       default:
         replicas: 1
   workers:
-    roleConfig:
-      podDisruptionBudget:
-        maxUnavailable: 1
     roleGroups:
       default:
         replicas: 1

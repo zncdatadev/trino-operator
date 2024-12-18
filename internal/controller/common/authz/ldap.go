@@ -27,15 +27,15 @@ type Ldap struct {
 // GetCommands implements Authenticator.
 func (l *Ldap) GetCommands() []string {
 
-	userEnvName := l.getEnvName("LDAP_USER")
-	passwordEnvName := l.getEnvName("LDAP_PASSWORD")
+	userEnvName := "LDAP_USER"
+	passwordEnvName := "LDAP_PASSWORD"
 	userFile := path.Join(l.getBindCredentialsMountPath(), "user")
 	passwordFile := path.Join(l.getBindCredentialsMountPath(), "password")
 	s := `
 set +x
 
-export ` + userEnvName + `=cat(` + userFile + `)
-export ` + passwordEnvName + `=cat(` + passwordFile + `)
+export ` + userEnvName + `=$(cat ` + userFile + `)
+export ` + passwordEnvName + `=$(cat ` + passwordFile + `)
 set -x
 `
 
@@ -59,9 +59,9 @@ func (l *Ldap) getEndpoint() string {
 	return schema + "://" + host
 }
 
-func (l *Ldap) getEnvName(prefix string) string {
-	return fmt.Sprintf("%s_%s", prefix, strings.ReplaceAll(l.AuthenticationClassName, "-", "_"))
-}
+// func (l *Ldap) getEnvName(prefix string) string {
+// 	return fmt.Sprintf("%s_%s", prefix, strings.ReplaceAll(l.AuthenticationClassName, "-", "_"))
+// }
 
 // GetConfigProperties implements Authenticator.
 func (l *Ldap) GetConfigProperties() *properties.Properties {
@@ -74,8 +74,8 @@ func (l *Ldap) GetConfigProperties() *properties.Properties {
 	p.Add("ldap.group-auth-pattern", fmt.Sprintf("(&(%s={user}))", l.Provider.LDAPFieldNames.Uid))
 
 	// bindCredentials is required
-	p.Add("ldap.bind-dn", fmt.Sprintf("${ENV:%s}", l.getEnvName("LDAP_USER")))
-	p.Add("ldap.bind-password", fmt.Sprintf("${ENV:%s}", l.getEnvName("LDAP_PASSWORD")))
+	p.Add("ldap.bind-dn", "${ENV:LDAP_USER}")
+	p.Add("ldap.bind-password", "${ENV:LDAP_PASSWORD}")
 
 	// TODO: Add ldap tls support
 
