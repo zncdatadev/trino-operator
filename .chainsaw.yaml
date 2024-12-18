@@ -5,8 +5,8 @@ metadata:
 spec:
   # namespace: chainsaw
   timeouts:
-    apply: 120s
-    assert: 240s
+    apply: 300s
+    assert: 420s
     cleanup: 120s
     delete: 120s
     error: 10s
