@@ -57,12 +57,15 @@ spec:
           file: trino.yaml
       - assert:
           file: trino-assert.yaml
+      - sleep:
+          duration: 3m
   - name: install testing tools
     try:
     - apply:
         file: testing-tools-install.yaml
     - assert:
         file: testing-tools-assert.yaml
+
   - name: access trino
     try:
     - script:

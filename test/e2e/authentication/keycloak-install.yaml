@@ -26,7 +26,7 @@ spec:
         resources:
           limits:
             memory: "512Mi"
-            cpu: "900m"
+            cpu: "1000m"
         ports:
         - containerPort: 8080
           name: http

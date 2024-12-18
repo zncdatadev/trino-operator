@@ -20,6 +20,10 @@ spec:
       containers:
         - name: testing-tools
           image: quay.io/zncdatadev/testing-tools:0.1.0-kubedoop0.0.0-dev
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "100m"
           command: ["sleep", "infinity"]
           env:
             - name: REQUESTS_CA_BUNDLE
