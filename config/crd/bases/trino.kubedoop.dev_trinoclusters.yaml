@@ -103,6 +103,12 @@ spec:
                           type: string
                         type: object
                     type: object
+                  catalogProperties:
+                    additionalProperties:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    type: object
                   listenerClass:
                     default: cluster-internal
                     type: string
@@ -138,7 +144,6 @@ spec:
                     properties:
                       affinity:
                         type: object
-                        x-kubernetes-embedded-resource: true
                         x-kubernetes-preserve-unknown-fields: true
                       gracefulShutdownTimeout:
                         default: 30s
@@ -228,9 +233,10 @@ spec:
                             type: boolean
                         type: object
                       queryMaxMemory:
-                        default: 50GB
+                        default: 5GB
                         type: string
                       queryMaxMemoryPerNode:
+                        default: 1000MB
                         type: string
                       resources:
                         properties:
@@ -284,7 +290,6 @@ spec:
                     type: object
                   podOverrides:
                     type: object
-                    x-kubernetes-embedded-resource: true
                     x-kubernetes-preserve-unknown-fields: true
                   replicas:
                     default: 1
@@ -325,7 +330,6 @@ spec:
                           properties:
                             affinity:
                               type: object
-                              x-kubernetes-embedded-resource: true
                               x-kubernetes-preserve-unknown-fields: true
                             gracefulShutdownTimeout:
                               default: 30s
@@ -415,9 +419,10 @@ spec:
                                   type: boolean
                               type: object
                             queryMaxMemory:
-                              default: 50GB
+                              default: 5GB
                               type: string
                             queryMaxMemoryPerNode:
+                              default: 1000MB
                               type: string
                             resources:
                               properties:
@@ -471,7 +476,6 @@ spec:
                           type: object
                         podOverrides:
                           type: object
-                          x-kubernetes-embedded-resource: true
                           x-kubernetes-preserve-unknown-fields: true
                         replicas:
                           default: 1
@@ -514,7 +518,6 @@ spec:
                     properties:
                       affinity:
                         type: object
-                        x-kubernetes-embedded-resource: true
                         x-kubernetes-preserve-unknown-fields: true
                       gracefulShutdownTimeout:
                         default: 30s
@@ -604,9 +607,10 @@ spec:
                             type: boolean
                         type: object
                       queryMaxMemory:
-                        default: 50GB
+                        default: 5GB
                         type: string
                       queryMaxMemoryPerNode:
+                        default: 1000MB
                         type: string
                       resources:
                         properties:
@@ -660,7 +664,6 @@ spec:
                     type: object
                   podOverrides:
                     type: object
-                    x-kubernetes-embedded-resource: true
                     x-kubernetes-preserve-unknown-fields: true
                   replicas:
                     default: 1
@@ -701,7 +704,6 @@ spec:
                           properties:
                             affinity:
                               type: object
-                              x-kubernetes-embedded-resource: true
                               x-kubernetes-preserve-unknown-fields: true
                             gracefulShutdownTimeout:
                               default: 30s
@@ -791,9 +793,10 @@ spec:
                                   type: boolean
                               type: object
                             queryMaxMemory:
-                              default: 50GB
+                              default: 5GB
                               type: string
                             queryMaxMemoryPerNode:
+                              default: 1000MB
                               type: string
                             resources:
                               properties:
@@ -847,7 +850,6 @@ spec:
                           type: object
                         podOverrides:
                           type: object
-                          x-kubernetes-embedded-resource: true
                           x-kubernetes-preserve-unknown-fields: true
                         replicas:
                           default: 1
