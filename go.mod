@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/go-logr/logr v1.4.2
-	github.com/onsi/ginkgo/v2 v2.22.1
+	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/zncdatadev/operator-go v0.12.0
 	golang.org/x/net v0.33.0
