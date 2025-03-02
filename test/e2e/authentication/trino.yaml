@@ -1,0 +1,24 @@
+apiVersion: trino.kubedoop.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: test-trino
+spec:
+  image:
+    productVersion: ($values.product_version)
+  clusterConfig:
+    authentication:
+      - authenticationClass: oidc-keycloak
+        oidc:
+          clientCredentialsSecret: oidc-secret
+      # - authenticationClass: openldap
+    tls:
+      internalSecretClass: tls
+      serverSecretClass: tls
+  coordinators:
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    roleGroups:
+      default:
+        replicas: 1
