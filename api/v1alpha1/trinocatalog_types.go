@@ -25,7 +25,7 @@ import (
 type TrinoCatalogSpec struct {
 	// List of connectors in the catalog
 	// +kubebuilder:validation:required
-	Connectors []ConnectorSpec `json:"connectors"`
+	Connector ConnectorSpec `json:"connector"`
 
 	// The configOverrides allow overriding arbitrary Trino settings. For example, for Hive you could add hive.metastore.username: trino.
 	// +kubebuilder:validation:Optional

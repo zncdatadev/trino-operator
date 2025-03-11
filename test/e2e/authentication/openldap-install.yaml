@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openldap
+  labels:
+    app: openldap
+spec:
+  replicas: 1
+  serviceName: "openldap"
+  selector:
+    matchLabels:
+      app: openldap
+  template:
+    metadata:
+      labels:
+        app: openldap
+    spec:
+      serviceAccountName: ldap-sa
+      restartPolicy: Always
+      containers:
+      - name: openldap
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        image: bitnami/openldap:latest
+        ports:
+        - containerPort: 1389
+        livenessProbe:
+          tcpSocket:
+            port: 1389
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 1389
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        env:
+        - name: LDAP_ADMIN_USERNAME
+          value: ($ldap_admin_username)
+        - name: LDAP_ADMIN_PASSWORD
+          value: ($ldap_admin_password)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap
+spec:
+  selector:
+    app: openldap
+  ports:
+  - port: 1389
+    targetPort: 1389
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ldap-sa
+  namespace: ($namespace)

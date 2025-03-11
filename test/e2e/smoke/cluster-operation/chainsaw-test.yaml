@@ -1,0 +1,61 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: smoke-cluster-operation
+spec:
+  bindings:
+    - name: cluster_stopped
+      value: false
+    - name: cluster_paused
+      value: false
+  steps:
+  - name: install trino cluster
+    try:
+    # install trino cluster, clusterOperation.stopped: false, clusterOperation.reconciliationPaused: false
+    - apply:
+        file: trino.yaml
+    - assert:
+        bindings:
+          - name: available_replicas
+            value: 1
+        file: trino-assert.yaml
+  - name: stop trino cluster
+    try:
+    - apply:
+        bindings:
+          - name: cluster_stopped
+            value: true
+        file: trino.yaml
+    - assert:
+        bindings:
+          - name: available_replicas
+            value: 0
+        file: trino-assert.yaml
+    # pause trino cluster, clusterOperation.reconciliationPaused: true
+  - name: pause trino cluster
+    try:
+    - apply:
+        bindings:
+          - name: cluster_paused
+            value: true
+          - name: cluster_stopped
+            value: false
+        file: trino.yaml
+    - assert:
+        bindings:
+          - name: available_replicas
+            value: 0
+        file: trino-assert.yaml
+    # restart trino cluster, clusterOperation.stopped: false, clusterOperation.reconciliationPaused: false
+  - name: restart trino cluster
+    try:
+    - apply:
+        file: trino.yaml
+    - assert:
+        bindings:
+          - name: available_replicas
+            value: 1
+        file: trino-assert.yaml
+    cleanup:
+    - sleep:
+        duration: 30s
