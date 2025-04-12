@@ -2,8 +2,6 @@ module github.com/zncdatadev/trino-operator
 
 go 1.23.4
 
-toolchain go1.24.0
-
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/onsi/ginkgo/v2 v2.23.0
