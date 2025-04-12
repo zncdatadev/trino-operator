@@ -1,12 +1,12 @@
 apiVersion: trino.kubedoop.dev/v1alpha1
 kind: TrinoCluster
 metadata:
-  name: trino-default
+  name: test-trino
 spec:
+  image:
+    productVersion: ($values.product_version)
   clusterConfig:
-    tls:
-      serverSecretClass: tls
-      internalSecretClass: tls
+    vectorAggregatorConfigMapName: vector-aggregator-discovery
   coordinators:
     roleGroups:
       default:
@@ -15,3 +15,6 @@ spec:
     roleGroups:
       default:
         replicas: 1
+        config:
+          logging:
+            enableVectorAgent: true

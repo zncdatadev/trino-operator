@@ -149,10 +149,34 @@ func (b *ConfigMapBuilder) Build(ctx context.Context) (ctrlclient.Object, error)
 		if err != nil {
 			return nil, err
 		}
-		b.AddItem(builder.VectorConfigFile, s)
+		b.AddItem(builder.VectorConfigFileName, s)
 	}
 
+	catalogProperties := b.getCatalogProperties()
+	for fileName, data := range catalogProperties {
+		b.AddItem(fileName, data)
+	}
 	return b.GetObject(), nil
+}
+
+// TODO: Refactor this method to use CatalogLabelSelector instead.
+func (b *ConfigMapBuilder) getCatalogProperties() map[string]string {
+	catalogData := make(map[string]string)
+	if b.ClusterConfig != nil && b.ClusterConfig.CatalogProperties != nil {
+		for catalogType, catalogProperties := range b.ClusterConfig.CatalogProperties {
+			p := properties.NewProperties()
+			for key, value := range catalogProperties {
+				p.Add(key, value)
+			}
+			s, err := p.Marshal()
+			if err != nil {
+				continue
+			}
+			fileName := fmt.Sprintf("catalog-%s.properties", catalogType)
+			catalogData[fileName] = s
+		}
+	}
+	return catalogData
 }
 
 func (b *ConfigMapBuilder) getDiscoveryUri() string {
@@ -181,6 +205,9 @@ func (b *ConfigMapBuilder) getConfigProperties(ctx context.Context) (*properties
 
 	if b.TrinoConfig != nil {
 		p.Add("query.max-memory", b.TrinoConfig.QueryMaxMemory)
+		// TODO: query.max-memory-per-node should be calculated based on the jvm heap size,
+		// about 80% of the jvm heap size, we use the 20% to do the other things,
+		// such as GC, thread management, etc(head headroom).
 		p.Add("query.max-memory-per-node", b.TrinoConfig.QueryMaxMemoryPerNode)
 	} else {
 		p.Add("query.max-memory", trinosv1alpha1.DefaultQueryMaxMemory)
@@ -213,9 +240,9 @@ func (b *ConfigMapBuilder) getConfigProperties(ctx context.Context) (*properties
 	p.Add("log.format", "json")
 	p.Add("log.max-size", "5MB")
 	p.Add("log.max-total-size", "10MB")
-	p.Add("log.path", path.Join(constants.KubedoopLogDir, "trino", "airlift.json"))
+	p.Add("log.path", path.Join(constants.KubedoopLogDir, "trino", b.RoleName+".airlift.json"))
 
-	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil {
+	if b.ClusterConfig != nil && b.ClusterConfig.Authentication != nil && b.RoleName == "coordinator" {
 		authentication, err := authz.NewAuthentication(ctx, b.Client, b.ClusterConfig.Authentication)
 		if err != nil {
 			return nil, err

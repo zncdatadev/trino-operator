@@ -1,0 +1,93 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: smoke-override-pdb
+spec:
+  bindings:
+    - name: hive_version
+      value: 3.1.3
+  steps:
+  - name: install minio
+    try:
+    - apply:
+        file: minio-secret.yaml
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        content: |
+          bash minio-install.sh
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          echo "Preparing Minio S3 bucket"
+          POD=$(kubectl -n $NAMESPACE get pod -l app.kubernetes.io/instance=minio -o name | head -n 1 | sed -e 's#pod/##')
+          kubectl cp -n $NAMESPACE yellow_tripdata_2021-07.csv $POD:/tmp
+          kubectl -n $NAMESPACE exec $POD -- mc cp /tmp/yellow_tripdata_2021-07.csv local/trino/taxi-data/
+  - name: install hive
+    try:
+    - apply:
+        file: minio-s3-connection.yaml
+    - apply:
+        file: hive.yaml
+    - assert:
+        timeout: 7m
+        file: hive-assert.yaml
+    catch:
+      - sleep:
+          duration: 5s
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+          content: |
+            set -ex
+            kubectl -n $NAMESPACE get pods
+      - describe:
+          apiVersion: v1
+          kind: Pod
+          selector: app.kubernetes.io/instance=test-hive
+      - podLogs:
+          selector: app.kubernetes.io/instance=test-hive
+          tail: -1
+  - name: install trino
+    try:
+      - apply:
+          file: trino.yaml
+      - assert:
+          file: trino-assert.yaml
+      - sleep:
+          duration: 3m
+  - name: install testing tools
+    try:
+    - apply:
+        file: testing-tools-install.yaml
+    - assert:
+        file: testing-tools-assert.yaml
+
+  - name: access trino
+    try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          kubectl -n $NAMESPACE cp check-active-workers.py testing-tools-0:/tmp/check-active-workers.py
+    - script:
+        timeout: 4m
+        content: |
+          kubectl -n $NAMESPACE exec testing-tools-0 -- python /tmp/check-active-workers.py -u admin -p admin -n $NAMESPACE -w 1
+  - name: access hive by trino
+    try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          kubectl -n $NAMESPACE cp check-s3.py testing-tools-0:/tmp/check-s3.py
+    - script:
+        timeout: 4m
+        content: |
+          kubectl -n $NAMESPACE exec testing-tools-0 -- python /tmp/check-s3.py -n $NAMESPACE

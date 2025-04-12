@@ -1,9 +1,6 @@
 package authz
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -23,14 +20,14 @@ type Oidc struct {
 	Provider                *authv1alpha1.OIDCProvider
 }
 
-func (o *Oidc) getEnvNamePrefix() string {
+// func (o *Oidc) getEnvNamePrefix() string {
 
-	hash := sha256.New()
-	hash.Write([]byte(o.Config.ClientCredentialsSecret))
-	hashedSecretName := hex.EncodeToString(hash.Sum(nil))
+// 	hash := sha256.New()
+// 	hash.Write([]byte(o.Config.ClientCredentialsSecret))
+// 	hashedSecretName := hex.EncodeToString(hash.Sum(nil))
 
-	return fmt.Sprintf("OIDC_%s", hashedSecretName)
-}
+// 	return fmt.Sprintf("OIDC_%s", hashedSecretName)
+// }
 
 func (o *Oidc) GetConfigProperties() *properties.Properties {
 	scopes := []string{"openid", "email", "profile"}
@@ -40,7 +37,7 @@ func (o *Oidc) GetConfigProperties() *properties.Properties {
 		Path:   o.Provider.RootPath,
 	}
 
-	if o.Provider.Port != 0 {
+	if (issuer.Scheme == "http" && o.Provider.Port != 80) || (issuer.Scheme == "https" && o.Provider.Port != 443) {
 		issuer.Host += ":" + strconv.Itoa(o.Provider.Port)
 	}
 
@@ -49,8 +46,8 @@ func (o *Oidc) GetConfigProperties() *properties.Properties {
 	p := properties.NewProperties()
 	p.Add("http-server.authentication.type", "OAUTH2")
 	p.Add("http-server.authentication.oauth2.scopes", strings.Join(scopes, " "))
-	p.Add("http-server.authentication.oauth2.client-id", fmt.Sprintf("${ENV:%s_CLIENT_ID}", o.getEnvNamePrefix()))
-	p.Add("http-server.authentication.oauth2.client-secret", fmt.Sprintf("${ENV:%s_CLIENT_SECRET}", o.getEnvNamePrefix()))
+	p.Add("http-server.authentication.oauth2.client-id", "${ENV:OIDC_CLIENT_ID}")
+	p.Add("http-server.authentication.oauth2.client-secret", "${ENV:OIDC_CLIENT_SECRET}")
 	p.Add("http-server.authentication.oauth2.issuer", issuer.String())
 	p.Add("http-server.authentication.oauth2.principal-field", o.Provider.PrincipalClaim)
 
@@ -60,7 +57,7 @@ func (o *Oidc) GetConfigProperties() *properties.Properties {
 func (o *Oidc) GetEnvVars() []corev1.EnvVar {
 	envVars := []corev1.EnvVar{
 		{
-			Name: fmt.Sprintf("%s_CLIENT_ID", o.getEnvNamePrefix()),
+			Name: "OIDC_CLIENT_ID",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					Key: "CLIENT_ID",
@@ -71,7 +68,7 @@ func (o *Oidc) GetEnvVars() []corev1.EnvVar {
 			},
 		},
 		{
-			Name: fmt.Sprintf("%s_CLIENT_SECRET", o.getEnvNamePrefix()),
+			Name: "OIDC_CLIENT_SECRET",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					Key: "CLIENT_SECRET",

@@ -1,0 +1,39 @@
+---
+apiVersion: authentication.kubedoop.dev/v1alpha1
+kind: AuthenticationClass
+metadata:
+  name: openldap
+spec:
+  provider:
+    ldap:
+      hostname: openldap.$NAMESPACE.svc.cluster.local
+      searchBase: ou=users,dc=example,dc=org
+      ldapFieldNames:
+        email: mail
+        uid: uid
+      bindCredentials:
+        secretClass: trino-ldap
+      port: 1389
+---
+apiVersion: secrets.kubedoop.dev/v1alpha1
+kind: SecretClass
+metadata:
+  name: trino-ldap
+spec:
+  backend:
+    k8sSearch:
+      searchNamespace:
+        pod: {}
+---
+# k8s secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trino-ldap
+  namespace: $NAMESPACE
+  labels:
+    secrets.kubedoop.dev/class: trino-ldap
+type: Opaque
+stringData:
+  user: $LDAP_TESTING_USER
+  password: $LDAP_TESTING_PASSWORD

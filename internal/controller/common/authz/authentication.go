@@ -69,14 +69,18 @@ func NewAuthentication(
 		authType, authenticator := AuthenticatorFectory(authenticationSpec.Oidc, obj.Spec.AuthenticationProvider)
 
 		if authenticator != nil {
-			if _, ok := authenticators[authType]; !ok {
-				authenticators[authType] = authenticator
+			if _, ok := authenticators[authType]; ok {
+				return nil, fmt.Errorf("Can not support multiple authenticators of the same type. Found multiple %s authenticators in AuthenticationClass %s", authType, name)
 			}
-			return nil, fmt.Errorf("Can not support multiple authenticators of the same type. Found multiple %s authenticators in AuthenticationClass %s", authType, name)
+			authenticators[authType] = authenticator
 		}
 	}
 
-	return &TrinoAuthentication{Authenticators: nil}, nil
+	authenticatorList := make([]Authenticator, 0, len(authenticators))
+	for _, authenticator := range authenticators {
+		authenticatorList = append(authenticatorList, authenticator)
+	}
+	return &TrinoAuthentication{Authenticators: authenticatorList}, nil
 }
 
 func (a *TrinoAuthentication) GetEnvVars() []corev1.EnvVar {

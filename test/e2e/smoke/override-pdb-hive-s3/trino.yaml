@@ -1,0 +1,71 @@
+apiVersion: trino.kubedoop.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: test-trino
+spec:
+  image:
+    productVersion: ($values.product_version)
+  clusterConfig:
+    catalogProperties:
+      hive:
+        connector.name: hive
+        fs.hadoop.enabled: "true"
+        hive.metastore.uri: thrift://test-hive-metastore-default:9083
+        hive.s3.aws-access-key: minioAccessKey
+        hive.s3.aws-secret-key: minioSecretKey
+        hive.s3.endpoint: http://minio:9000
+        hive.s3.path-style-access: "true"
+    catalogLabelSelector:
+      matchLabels:
+        trino: trino
+  coordinators:
+    envOverrides:
+      COMMON_VAR: role-value # overridden by role group below
+      ROLE_VAR: role-value   # only defined here at role level
+    roleGroups:
+      default:
+        replicas: 1
+        config:
+          resources:
+            cpu:
+              max: 1
+              min: 800m
+            memory:
+              limit: 2Gi
+        envOverrides:
+          COMMON_VAR: group-value # overrides role value
+          GROUP_VAR: group-value # only defined here at group level
+  workers:
+    envOverrides:
+      COMMON_VAR: role-value # overridden by role group below
+      ROLE_VAR: role-value   # only defined here at role level
+    roleGroups:
+      default:
+        replicas: 1
+        config:
+          resources:
+            cpu:
+              max: 1
+              min: 800m
+            memory:
+              limit: 2Gi
+        envOverrides:
+          COMMON_VAR: group-value # overrides role value
+          GROUP_VAR: group-value # only defined here at group level
+# ---
+# the catalog reconcile operation is in construction, so we use mound catalog dir to instead
+# apiVersion: trino.kubedoop.dev/v1alpha1
+# kind: TrinoCatalog
+# metadata:
+#   name: hive
+#   labels:
+#     trino: trino
+# spec:
+#   connector:
+#     hive:
+#       metastore:
+#         configMap: hive
+#       s3:
+#         reference: minio
+#     s3:
+#       reference: minio

@@ -96,6 +96,13 @@ func (r *Reconciler) registerResourceWithRoleGroup(
 		r.Client,
 		info.GetFullName(),
 		ports,
+		func(o *builder.ServiceBuilderOptions) {
+			o.ClusterName = info.GetClusterName()
+			o.RoleName = info.GetRoleName()
+			o.RoleGroupName = info.GetGroupName()
+			o.Labels = info.GetLabels()
+			o.Annotations = info.GetAnnotations()
+		},
 	)
 	reconcilers = append(reconcilers, serviceReconciler)
 

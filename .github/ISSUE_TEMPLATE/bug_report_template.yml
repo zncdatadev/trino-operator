@@ -23,6 +23,8 @@ body:
         - no check
         - I have searched and found no existing issues
       default: 0
+    validations:
+      required: true      
   - type: textarea
     id: reproduction
     attributes:
