@@ -147,15 +147,14 @@ func (b *StatefulSetBuilder) Build(ctx context.Context) (ctrlclient.Object, erro
 		return nil, err
 	}
 	if b.ClusterConfig != nil && b.ClusterConfig.VectorAggregatorConfigMapName != "" {
-		decorator := builder.NewVectorDecorator(
-			obj,
-			b.Image,
-			TrinoLogVolumeName,
+		vectorFactory := builder.NewVector(
 			TrinoConfigVolumeName,
-			b.ClusterConfig.VectorAggregatorConfigMapName)
-		if err := decorator.Decorate(); err != nil {
-			return nil, err
-		}
+			TrinoLogVolumeName,
+			b.GetImage(),
+		)
+
+		obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, vectorFactory.GetVolumes()...)
+		obj.Spec.Template.Spec.Containers = append(obj.Spec.Template.Spec.Containers, *vectorFactory.GetContainer())
 	}
 	return obj, nil
 }
