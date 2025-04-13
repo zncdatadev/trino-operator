@@ -56,7 +56,7 @@ func (r *Reconciler) GetImage() *util.Image {
 }
 
 func (r *Reconciler) getCoordinatorSvcFqdn() string {
-	var fqdns []string = make([]string, 0)
+	fqdns := make([]string, 0)
 	coordinator := r.Spec.Coordinators
 
 	if coordinator.RoleGroups != nil {
