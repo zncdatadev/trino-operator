@@ -11,10 +11,8 @@ import (
 	"github.com/zncdatadev/operator-go/pkg/constants"
 	"github.com/zncdatadev/operator-go/pkg/util"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ Authenticator = &Ldap{}
@@ -83,7 +81,7 @@ func (l *Ldap) GetConfigProperties() *properties.Properties {
 }
 
 // GetEnvVars implements Authenticator.
-func (l *Ldap) GetEnvVars() []v1.EnvVar {
+func (l *Ldap) GetEnvVars() []corev1.EnvVar {
 	// use secret class pass the bind credentials
 	return nil
 }
@@ -93,8 +91,8 @@ func (l *Ldap) getBindCredentialsVolumeName() string {
 }
 
 // GetVolumeMounts implements Authenticator.
-func (l *Ldap) GetVolumeMounts() []v1.VolumeMount {
-	return []v1.VolumeMount{
+func (l *Ldap) GetVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
 		{
 			Name:      l.getBindCredentialsVolumeName(),
 			MountPath: l.getBindCredentialsMountPath(),
@@ -103,7 +101,7 @@ func (l *Ldap) GetVolumeMounts() []v1.VolumeMount {
 }
 
 // GetVolumes implements Authenticator.
-func (l *Ldap) GetVolumes() []v1.Volume {
+func (l *Ldap) GetVolumes() []corev1.Volume {
 	secretClass := l.Provider.BindCredentials.SecretClass
 
 	scopes := []string{}
@@ -146,5 +144,5 @@ func (l *Ldap) GetVolumes() []v1.Volume {
 		},
 	}
 
-	return []v1.Volume{secretVolume}
+	return []corev1.Volume{secretVolume}
 }

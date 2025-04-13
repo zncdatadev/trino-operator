@@ -70,7 +70,7 @@ func NewAuthentication(
 
 		if authenticator != nil {
 			if _, ok := authenticators[authType]; ok {
-				return nil, fmt.Errorf("Can not support multiple authenticators of the same type. Found multiple %s authenticators in AuthenticationClass %s", authType, name)
+				return nil, fmt.Errorf("cannot support multiple authenticators of the same type; found multiple %s authenticators in AuthenticationClass %s", authType, name)
 			}
 			authenticators[authType] = authenticator
 		}
