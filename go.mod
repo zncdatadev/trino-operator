@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	github.com/zncdatadev/operator-go v0.12.3
+	github.com/zncdatadev/operator-go v0.12.4-0.20250415105828-5546fd0a1046
 	golang.org/x/net v0.39.0
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
