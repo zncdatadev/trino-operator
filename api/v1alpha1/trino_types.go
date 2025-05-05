@@ -25,10 +25,9 @@ import (
 )
 
 const (
-	DefaultRepository      = "quay.io/zncdatadev"
-	DefaultProductVersion  = "451"
-	DefaultKubedoopVersion = "0.0.0-dev"
-	DefaultProductName     = "trino"
+	DefaultRepository     = "quay.io/zncdatadev"
+	DefaultProductVersion = "451"
+	DefaultProductName    = "trino"
 )
 
 const (
@@ -77,6 +76,7 @@ type TrinoClusterSpec struct {
 	ClusterOperation *commonsv1alpha1.ClusterOperationSpec `json:"clusterOperation,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +default:value={"repo": "quay.io/zncdatadev", "pullPolicy": "IfNotPresent"}
 	Image *ImageSpec `json:"image,omitempty"`
 
 	// +kubebuilder:validation:Required
@@ -215,14 +215,12 @@ type ImageSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=quay.io/zncdatadev
-	Repository string `json:"repository,omitempty"`
+	Repo string `json:"repo,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="0.0.0-dev"
 	KubedoopVersion string `json:"kubedoopVersion,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="451"
 	ProductVersion string `json:"productVersion,omitempty"`
 
 	// +kubebuilder:validation:Optional
@@ -230,7 +228,6 @@ type ImageSpec struct {
 	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="trino"
 	PullSecretName string `json:"pullSecretName,omitempty"`
 }
 

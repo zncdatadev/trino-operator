@@ -14,6 +14,7 @@ import (
 	"github.com/zncdatadev/trino-operator/internal/controller/common"
 	"github.com/zncdatadev/trino-operator/internal/controller/coordinator"
 	"github.com/zncdatadev/trino-operator/internal/controller/worker"
+	"github.com/zncdatadev/trino-operator/internal/util/version"
 )
 
 var _ reconciler.Reconciler = &Reconciler{}
@@ -36,20 +37,19 @@ func NewClusterReconciler(
 }
 
 func (r *Reconciler) GetImage() *util.Image {
-	image := &util.Image{
-		Repo:            trinov1alpha1.DefaultRepository,
-		ProductName:     trinov1alpha1.DefaultProductName,
-		KubedoopVersion: trinov1alpha1.DefaultKubedoopVersion,
-		ProductVersion:  trinov1alpha1.DefaultProductVersion,
-		PullPolicy:      corev1.PullIfNotPresent,
-	}
-	if r.Spec.Image != nil {
-		image.Custom = r.Spec.Image.Custom
-		image.Repo = r.Spec.Image.Repository
-		image.ProductVersion = r.Spec.Image.ProductVersion
+	image := util.NewImage(
+		trinov1alpha1.DefaultProductName,
+		version.BuildVersion,
+		trinov1alpha1.DefaultProductVersion,
+		func(options *util.ImageOptions) {
+			options.Custom = r.Spec.Image.Custom
+			options.Repo = r.Spec.Image.Repo
+			options.PullPolicy = r.Spec.Image.PullPolicy
+		},
+	)
+
+	if r.Spec.Image.KubedoopVersion != "" {
 		image.KubedoopVersion = r.Spec.Image.KubedoopVersion
-		image.PullPolicy = r.Spec.Image.PullPolicy
-		image.PullSecretName = r.Spec.Image.PullSecretName
 	}
 
 	return image

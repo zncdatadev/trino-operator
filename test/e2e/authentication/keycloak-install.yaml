@@ -23,10 +23,6 @@ spec:
           value: admin
         - name: KEYCLOAK_ADMIN_PASSWORD
           value: admin
-        resources:
-          limits:
-            memory: "512Mi"
-            cpu: "1000m"
         ports:
         - containerPort: 8080
           name: http
