@@ -108,6 +108,10 @@ spec:
                                       scope:
                                         description: SecretClass scope
                                         properties:
+                                          listenerVolumes:
+                                            items:
+                                              type: string
+                                            type: array
                                           node:
                                             type: boolean
                                           pod:
@@ -128,7 +132,12 @@ spec:
                                     default: false
                                     type: boolean
                                   port:
+                                    minimum: 0
                                     type: integer
+                                  region:
+                                    default: us-east-1
+                                    description: S3 bucket region for signing requests.
+                                    type: string
                                   tls:
                                     properties:
                                       verification:
@@ -136,13 +145,6 @@ spec:
                                           TLSPrivider defines the TLS provider for authentication.
                                           You can specify the none or server or mutual verification.
                                         properties:
-                                          mutual:
-                                            properties:
-                                              certSecretClass:
-                                                type: string
-                                            required:
-                                            - certSecretClass
-                                            type: object
                                           none:
                                             type: object
                                           server:
@@ -205,6 +207,10 @@ spec:
                                       scope:
                                         description: SecretClass scope
                                         properties:
+                                          listenerVolumes:
+                                            items:
+                                              type: string
+                                            type: array
                                           node:
                                             type: boolean
                                           pod:
@@ -225,7 +231,12 @@ spec:
                                     default: false
                                     type: boolean
                                   port:
+                                    minimum: 0
                                     type: integer
+                                  region:
+                                    default: us-east-1
+                                    description: S3 bucket region for signing requests.
+                                    type: string
                                   tls:
                                     properties:
                                       verification:
@@ -233,13 +244,6 @@ spec:
                                           TLSPrivider defines the TLS provider for authentication.
                                           You can specify the none or server or mutual verification.
                                         properties:
-                                          mutual:
-                                            properties:
-                                              certSecretClass:
-                                                type: string
-                                            required:
-                                            - certSecretClass
-                                            type: object
                                           none:
                                             type: object
                                           server:

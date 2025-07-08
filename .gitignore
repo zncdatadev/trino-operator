@@ -151,3 +151,9 @@ Temporary Items
 **/__debug_bin**
 
 kind-kubeconfig*
+
+docker-digests.json
+
+# helm charts
+# helm package directory
+target

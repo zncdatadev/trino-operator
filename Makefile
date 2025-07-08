@@ -146,6 +146,17 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > dist/install.yaml
 
+.PHONY: chart ## Generate helm chart for the operator.
+chart: manifests kustomize ## Generate helm chart for the operator.
+	$(KUSTOMIZE) build config/crd > deploy/helm/$(PROJECT_NAME)/crds/crds.yaml
+
+.PHONY: chart-publish ## Publish helm chart for the operator.
+chart-publish: helm chart ## Publish helm chart for the operator.
+	mkdir -p target/charts
+	$(HELM) package deploy/helm/$(PROJECT_NAME) --version $(VERSION) --app-version $(VERSION) --destination target/charts
+	$(HELM) push target/charts/$(PROJECT_NAME)-$(VERSION).tgz $(OCI_REGISTRY)
+
+
 ##@ Deployment
 
 ifndef ignore-not-found
