@@ -67,14 +67,14 @@ jobs:
       matrix:
         k8s-version: [
           '1.26.15',
-          '1.27.16',
-          '1.28.15',
-          '1.29.12',
-          '1.30.8',
-          '1.31.4',
+          # '1.27.16',
+          # '1.28.15',
+          # '1.29.12',
+          # '1.30.8',
+          # '1.31.4',
           '1.32.0'
         ]
-        product-version: ['451']
+        product-version: ['451','455']
     steps:
       - name: Clone the code
         uses: actions/checkout@v4
