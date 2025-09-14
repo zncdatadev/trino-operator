@@ -17,11 +17,11 @@ provisioning:
     - centralized-minio-users
   resources:
     requests:
-      memory: 512Mi
-      cpu: "200m"
-    limits:
-      memory: "600Mi"
-      cpu: "300m"
+      memory: 100Mi
+      cpu: "10m"
+    # limits:
+    #   memory: "600Mi"
+    #   cpu: "300m"
   podSecurityContext:
     enabled: false
   containerSecurityContext:
@@ -41,11 +41,11 @@ persistence:
 
 resources:
   requests:
-    memory: 512Mi
-    cpu: "200m"
-  limits:
-    memory: "600Mi"
-    cpu: "300m"
+    memory: 100Mi
+    cpu: "10m"
+  # limits:
+  #   memory: "600Mi"
+  #   cpu: "300m"
 
 auth:
   existingSecret: minio-credentials
