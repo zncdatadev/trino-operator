@@ -10,6 +10,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
   - services
   verbs:
   - create
@@ -23,6 +24,26 @@ rules:
   - apps
   resources:
   - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - authentication.kubedoop.dev
+  resources:
+  - authenticationclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
   verbs:
   - create
   - delete
