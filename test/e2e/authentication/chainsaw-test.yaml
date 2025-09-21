@@ -149,4 +149,13 @@ spec:
             kubectl -n $NAMESPACE cp oidc-login-assert.py testing-tools-0:/tmp/oidc-login-assert.py
 
             kubectl exec -n $NAMESPACE testing-tools-0 -- python /tmp/oidc-login-assert.py https://test-trino-coordinator-default.$NAMESPACE.svc.cluster.local:8443/ui/
+    catch:
+      - describe:
+          apiVersion: trino.kubedoop.dev/v1alpha1
+          kind: TrinoCluster
+      - get:
+          apiVersion: trino.kubedoop.dev/v1alpha1
+          kind: TrinoCluster
+      - podLogs:
+          selector: app.kubernetes.io/name=trino-operator
   # TODO: Add more tests for LDAP authentication, but for now, we only test OIDC authentication, the ldap authentication is not working yet

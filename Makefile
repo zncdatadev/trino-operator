@@ -1,8 +1,14 @@
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+# VERSION refers to the application version.
 VERSION ?= 0.0.0-dev
-ENVTEST_K8S_VERSION = 1.26.1
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+# The version only effects unit tests.
+# You can find the list of released envtest-k8s versions with `Release envtest` from https://github.com/kubernetes-sigs/controller-tools/releases
+ENVTEST_K8S_VERSION = 1.32.0
 
+# REGISTRY refers to the container registry where the image will be pushed.
 REGISTRY ?= quay.io/zncdatadev
+# OCI_REGISTRY refers to the OCI registry where the helm chart will be pushed.
+OCI_REGISTRY ?= oci://quay.io/kubedoopcharts
 PROJECT_NAME = trino-operator
 
 # Build variables
@@ -258,7 +264,7 @@ helm-install-depends: helm ## Install the helm chart depends.
 	$(HELM) repo add kubedoop https://zncdatadev.github.io/kubedoop-helm-charts/
 ifneq ($(strip $(HELM_DEPENDS)),)
 	for dep in $(HELM_DEPENDS); do \
-		$(HELM) upgrade --install --create-namespace --namespace $(TEST_NAMESPACE) --wait $$dep kubedoop/$$dep --version $(VERSION); \
+		$(HELM) upgrade --install --create-namespace --namespace $(TEST_NAMESPACE) --wait $$dep oci://quay.io/kubedoopcharts/$$dep --version $(VERSION); \
 	done
 endif
 
