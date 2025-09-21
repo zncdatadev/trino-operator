@@ -9,7 +9,7 @@ ENVTEST_K8S_VERSION = 1.32.0
 REGISTRY ?= quay.io/zncdatadev
 # OCI_REGISTRY refers to the OCI registry where the helm chart will be pushed.
 OCI_REGISTRY ?= oci://quay.io/kubedoopcharts
-PROJECT_NAME = zookeeper-operator
+PROJECT_NAME = trino-operator
 
 # Build variables
 BUILD_TIMESTAMP ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
