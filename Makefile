@@ -256,7 +256,7 @@ mv $(1) $(1)-$(3) ;\
 ln -sf $(1)-$(3) $(1)
 endef
 
-HELM_DEPENDS ?=  commons-operator listener-operator secret-operator zookeeper-operator hive-operator
+HELM_DEPENDS ?= commons-operator listener-operator secret-operator hive-operator
 TEST_NAMESPACE = kubedoop-operators
 
 .PHONY: helm-install-depends
