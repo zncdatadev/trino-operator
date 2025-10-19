@@ -6,6 +6,7 @@ of the Keycloak page and posts the credentials of a test user to it.
 Finally it tests that Keycloak redirects back to the original page.
 """
 import logging
+import os
 import requests
 import sys
 import urllib3
@@ -23,15 +24,14 @@ def test_login_flow(login_url):
     authenticate_url = html.form['action']
     print(f"authenticate_url is : {authenticate_url}")
     result = session.post(authenticate_url, data={
-        'username': "user",
-        'password': "password",
+        'username': os.getenv("OIDC_TRINO_USERNAME", "user"),
+        'password': os.getenv("OIDC_TRINO_PASSWORD", "password"),
     })
 
     result.raise_for_status()
 
     logging.info(f"start assert result.url: {result.url}, login_url: {login_url}")
-    assert result.url == login_url, \
-        "Redirection to the Trino UI expected"
+    assert result.url == login_url, "Redirection to the Trino UI expected"
 
 
 def main():

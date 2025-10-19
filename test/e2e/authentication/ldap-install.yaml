@@ -1,0 +1,270 @@
+# When all resources are applied, you can use openldap client to verify the data is loaded.
+# To use `ldapsearch -x  -H ldap://<lldap-service-ip>:3890 -D "cn=admin,ou=people,dc=example,dc=com"  -b "dc=example,dc=com" "objectClass=*" -w password`
+# search result should be like below:
+# ##################################### Begin ldapsearch output ###########################################
+# # extended LDIF
+# #
+# # LDAPv3
+# # base <dc=example,dc=com> with scope subtree
+# # filter: objectClass=*
+# # requesting: ALL
+# #
+
+# # admin, people, example.com
+# dn: uid=admin,ou=people,dc=example,dc=com
+# cn: Administrator
+# createtimestamp: 2025-10-03T10:00:12.526101795+00:00
+# entryuuid: 86f47617-4629-30fd-b548-e34a815658c1
+# objectclass: inetOrgPerson
+# objectclass: posixAccount
+# objectclass: mailAccount
+# objectclass: person
+# uid: admin
+
+# # superset, people, example.com
+# dn: uid=superset,ou=people,dc=example,dc=com
+# cn: Superset Admin
+# createtimestamp: 2025-10-03T10:13:18.269993048+00:00
+# entryuuid: 1790fa19-0923-3d0d-8bba-807b584baae9
+# first_name: superset
+# givenname: superset
+# last_name: superset
+# mail: superset@example.com
+# objectclass: inetOrgPerson
+# objectclass: posixAccount
+# objectclass: mailAccount
+# objectclass: person
+# sn: superset
+# uid: superset
+
+# # lldap_admin, groups, example.com
+# dn: cn=lldap_admin,ou=groups,dc=example,dc=com
+# cn: lldap_admin
+# entryuuid: 9a71524b-bd24-3964-805e-38a303d441e2
+# member: uid=admin,ou=people,dc=example,dc=com
+# objectclass: groupOfUniqueNames
+# objectclass: groupOfNames
+# uid: lldap_admin
+# uniquemember: uid=admin,ou=people,dc=example,dc=com
+
+# # lldap_password_manager, groups, example.com
+# dn: cn=lldap_password_manager,ou=groups,dc=example,dc=com
+# cn: lldap_password_manager
+# entryuuid: b1349b96-166f-3fe0-a7f9-344d47741e72
+# objectclass: groupOfUniqueNames
+# objectclass: groupOfNames
+# uid: lldap_password_manager
+
+# # lldap_strict_readonly, groups, example.com
+# dn: cn=lldap_strict_readonly,ou=groups,dc=example,dc=com
+# cn: lldap_strict_readonly
+# entryuuid: a76e476b-0446-324a-a3a0-1b2910c6fbff
+# objectclass: groupOfUniqueNames
+# objectclass: groupOfNames
+# uid: lldap_strict_readonly
+
+# # superset, groups, example.com
+# dn: cn=superset,ou=groups,dc=example,dc=com
+# cn: superset
+# entryuuid: c48a4e57-9cae-344b-b60f-c1e71492a2c3
+# member: uid=superset,ou=people,dc=example,dc=com
+# objectclass: groupOfUniqueNames
+# objectclass: groupOfNames
+# uid: superset
+# uniquemember: uid=superset,ou=people,dc=example,dc=com
+
+# # search result
+# search: 2
+# result: 0 Success
+# control: 1.2.840.113556.1.4.319 false MAUCAQYEAA==
+# pagedresults: estimate=6 cookie=
+
+# # numResponses: 7
+# # numEntries: 6
+# ##################################### End ldapsearch output ###########################################
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lldap-credentials
+  labels:
+    app.kubernetes.io/name: lldap
+type: Opaque
+stringData:
+  LLDAP_LDAP_USER_PASS: password
+  LLDAP_JWT_SECRET: lldapinitjwtkey
+  LLDAP_KEY_SEED: lldapinitkeyseed
+  LDAP_TRINO_USERNAME: ($LDAP_TRINO_USERNAME)
+  LDAP_TRINO_PASSWORD: ($LDAP_TRINO_PASSWORD)
+---
+# ref: https://github.com/lldap/lldap/blob/main/docs/install.md
+# ref: https://github.com/Evantage-WS/lldap-kubernetes/blob/main/lldap-deployment.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: lldap
+  labels:
+    app.kubernetes.io/name: lldap
+spec:
+  replicas: 1
+  serviceName: "lldap"
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: lldap
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: lldap
+    spec:
+      containers:
+      - name: lldap
+        image: lldap/lldap:stable
+        env:
+        - name: LLDAP_LDAP_BASE_DN
+          value: "dc=example,dc=com"
+        envFrom:
+        - secretRef:
+            name: lldap-credentials
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3890
+          name: ldap
+        - containerPort: 17170
+          name: web
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /
+            port: web
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: web
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 3
+      restartPolicy: Always
+      volumes:
+      - name: data
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lldap
+  labels:
+    app.kubernetes.io/name: lldap
+spec:
+  selector:
+    app.kubernetes.io/name: lldap
+  ports:
+  - port: 3890
+    name: ldap
+    targetPort: ldap
+  - port: 17170
+    name: web
+    targetPort: web
+---
+# ref: https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lldap-user-data
+  labels:
+    app.kubernetes.io/name: lldap
+data:
+  user-configs.json: |
+    {
+      "id": "($ldap_trino_username)",
+      "email": "($ldap_trino_username)@example.com",
+      "password": "($ldap_trino_password)",
+      "groups": [
+        "trino_users"
+      ]
+    }
+  group-configs.json: |
+    {
+      "name": "trino_users"
+    }
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lldap-init
+  labels:
+    app.kubernetes.io/name: lldap-init
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - name: init-data-files
+        image: lldap/lldap:stable
+        command:
+        - /bin/bash
+        - -c
+        args:
+        - |
+          mkdir -p /bootstrap/user-configs
+          mkdir -p /bootstrap/group-configs
+          # Use env to replace placeholders in the config files and copy to a shared volume
+          sed "s|(\$ldap_trino_username)|$LDAP_TRINO_USERNAME|g" /config/user-configs.json | \
+            sed "s|(\$ldap_trino_password)|$LDAP_TRINO_PASSWORD|g" \
+            > /bootstrap/user-configs/user-configs.json
+          cp /config/group-configs.json /bootstrap/group-configs/group-configs.json
+        envFrom:
+        - secretRef:
+            name: lldap-credentials
+        volumeMounts:
+        - name: lldap-user-data
+          mountPath: /config/
+          readOnly: true
+        - name: bootstrap-data
+          mountPath: /bootstrap/
+      containers:
+      - name: lldap-init
+        image: lldap/lldap:stable
+        command:
+        - /bin/bash
+        - -c
+        args:
+        - |
+          # Sleep to wait for lldap service to be ready
+          sleep 10
+
+          # Show bootstrap data
+          ls -alh /bootstrap/group-configs
+          ls -alh /bootstrap/user-configs
+
+          # Run the bootstrap script to initialize data
+          /app/bootstrap.sh
+        env:
+        - name: LLDAP_URL
+          value: "http://lldap:17170"
+        - name: DO_CLEANUP
+          value: "false"
+        envFrom:
+        - secretRef:
+            name: lldap-credentials
+        volumeMounts:
+        - name: bootstrap-data
+          mountPath: /bootstrap/
+      volumes:
+      - name: lldap-user-data
+        configMap:
+          name: lldap-user-data
+      - name: bootstrap-data
+        emptyDir: {}
+

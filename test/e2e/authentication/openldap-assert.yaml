@@ -1,7 +1,0 @@
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: openldap
-status:
-  readyReplicas: 1
-  replicas: 1

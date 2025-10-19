@@ -3,13 +3,11 @@ kind: HiveMetastore
 metadata:
   name: test-hive
 spec:
-  image:
-    productVersion: ($hive_version)
   clusterConfig:
     database:
       databaseType: derby
       connString: jdbc:derby:;databaseName=metastore_db;create=true
-      credentialsSecret: hive-credentials
+      credentialsSecret: hive-database-credentials
     s3:
       reference: minio
   metastore:
@@ -20,7 +18,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: hive-credentials
+  name: hive-database-credentials
 type: Opaque
 stringData:
   username: hive

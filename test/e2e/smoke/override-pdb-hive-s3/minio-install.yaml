@@ -1,0 +1,220 @@
+# Use minio as a lightweight S3-compatible object storage for testing purposes.
+# Minio all environment variables can be found at: https://github.com/minio/minio/discussions/16298
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-admin-credentials
+  labels:
+    app.kubernetes.io/name: minio
+stringData:
+  MINIO_ROOT_USER: ($MINIO_ROOT_USERNAME)
+  MINIO_ROOT_PASSWORD: ($MINIO_ROOT_PASSWORD)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-credentials
+  labels:
+    app.kubernetes.io/name: minio
+    secrets.kubedoop.dev/class: s3-credentials  # used by secret class
+type: Opaque
+stringData:
+  ACCESS_KEY: ($WAREHOUSE_MINIO_USERNAME)
+  SECRET_KEY: ($WAREHOUSE_MINIO_PASSWORD)
+  BUCKET: ($WAREHOUSE_MINIO_BUCKET)
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minio-policy
+data:
+  minio-policy.json: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "s3:GetObject",
+            "s3:PutObject",
+            "s3:ListBucket",
+            "s3:DeleteObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::${BUCKET}",
+            "arn:aws:s3:::${BUCKET}/*"
+          ]
+        }
+      ]
+    }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  labels:
+    app.kubernetes.io/name: minio
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9000
+      targetPort: 9000
+      protocol: TCP
+      name: api
+    - port: 9001
+      targetPort: 9001
+      protocol: TCP
+      name: web
+  selector:
+    app.kubernetes.io/name: minio
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  labels:
+    app.kubernetes.io/name: minio
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: minio
+  serviceName: minio
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: minio
+    spec:
+      containers:
+      # command tar not available in minio image, so use sidecar to use kubectl cp files into the pod
+      # then use mc (minio client) to copy files from sidecar to minio
+      - name: sidecar
+        image: quay.io/zncdatadev/tools:1.0.0-kubedoop0.0.0-dev
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -ex
+          # Wait for Minio to be ready by repeatedly trying to set an alias
+          until mc alias set myminio http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
+            echo "Waiting for Minio..."
+            sleep 5
+          done
+          # Keep the sidecar running
+          tail -f /dev/null
+        volumeMounts:
+        - name: local-data
+          mountPath: /local-data
+      - name: minio
+        image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
+        envFrom:
+        - secretRef:
+            name: minio-admin-credentials
+        args:
+        - server
+        - /data
+        - --console-address
+        - ":9001"
+        ports:
+        - containerPort: 9001
+          name: web
+        - containerPort: 9000
+          name: api
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: local-data
+          mountPath: /local-data
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: local-data
+        emptyDir: {}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-init
+  labels:
+    app.kubernetes.io/name: minio-init
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - name: prepare-policy
+        image: quay.io/zncdatadev/tools:1.0.0-kubedoop0.0.0-dev
+        envFrom:
+        - secretRef:
+            name: minio-credentials
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Substitute environment variables in the policy template and output to /data
+          envsubst < /config/minio-policy.json > /data/minio-policy.json
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: data
+          mountPath: /data
+      containers:
+      - name: minio-init
+        image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
+        envFrom:
+        - secretRef:
+            name: minio-credentials
+        - secretRef:
+            name: minio-admin-credentials
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -ex
+          # Wait for Minio to be ready by repeatedly trying to set an alias
+          until mc alias set myminio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
+            echo "Waiting for Minio..."
+            sleep 5
+          done
+
+          # Create a new user if it doesn't exist
+          mc admin user add myminio $ACCESS_KEY $SECRET_KEY || echo "User $ACCESS_KEY already exists"
+
+          # Create a bucket named 'hive' if it doesn't exist
+          mc mb myminio/$BUCKET/$PREFIX_PATH || echo "Bucket $BUCKET already exists"
+
+          # Set the policy for the 'hive'' bucket
+          mc admin policy create myminio minio-policy /data/minio-policy.json
+          mc admin policy attach myminio minio-policy --user $ACCESS_KEY
+          echo "Minio initialized successfully."
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: config
+        configMap:
+          name: minio-policy
+      - name: data
+        emptyDir: {}
+  backoffLimit: 4

@@ -1,0 +1,20 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lldap-init
+  labels:
+    app.kubernetes.io/name: lldap-init
+status:
+  succeeded: 1
+  ready: 0
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: lldap
+  labels:
+    app.kubernetes.io/name: lldap
+status:
+  readyReplicas: 1
+  replicas: 1

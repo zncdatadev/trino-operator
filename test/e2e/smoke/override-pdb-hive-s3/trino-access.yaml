@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trino-admin-credentials
+type: Opaque
+stringData:
+  USERNAME: admin # default Trino admin username
+  PASSWORD: admin # default Trino admin password
+  BUCKET: ($WAREHOUSE_MINIO_BUCKET)
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: trino-access
+  labels:
+    app.kubernetes.io/name: trino-access
+spec:
+  restartPolicy: Never
+  initContainers:
+  - name: check-active
+    image: quay.io/zncdatadev/testing-tools:0.1.0-kubedoop0.0.0-dev
+    env:
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    envFrom:
+    - secretRef:
+        name: trino-admin-credentials
+    command:
+    - /bin/bash
+    - -c
+    - |
+      set -ex
+      ls -alh /scripts
+      # Run check-active-workers.py to ensure Trino is up and has active workers,
+      # save flag file to /data/active if successful
+      /usr/local/bin/python /scripts/check-active-workers.py -u $USERNAME -p $PASSWORD -n $NAMESPACE -w 1 && touch /data/active
+    volumeMounts:
+    - name: data
+      mountPath: /data
+    - name: scripts
+      mountPath: /scripts
+  - name: access-warehouse
+    image: quay.io/zncdatadev/testing-tools:0.1.0-kubedoop0.0.0-dev
+    env:
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    envFrom:
+    - secretRef:
+        name: trino-admin-credentials
+    command:
+    - /bin/bash
+    - -c
+    - |
+      set -ex
+      # Run check-s3.py to access Hive S3 bucket, save flag file to /data/s3 if successful
+      /usr/local/bin/python /scripts/check-s3.py -u $USERNAME -p $PASSWORD -n $NAMESPACE -b $BUCKET && touch /data/s3
+    volumeMounts:
+    - name: data
+      mountPath: /data
+    - name: scripts
+      mountPath: /scripts
+  containers:
+  - name: trino-access
+    image: quay.io/zncdatadev/testing-tools:0.1.0-kubedoop0.0.0-dev
+    resources:
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+    command:
+    - /bin/bash
+    - -c
+    - |
+      set -ex
+      # Check for the presence of both flag files to confirm success
+      if [[ -f /data/active && -f /data/s3 ]]; then
+        echo "Trino access and Hive S3 access tests passed."
+        exit 0
+      fi
+      echo "Trino access or Hive S3 access tests failed."
+      exit 1
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    emptyDir: {}
+  - name: scripts
+    configMap:
+      name: trino-access-scripts

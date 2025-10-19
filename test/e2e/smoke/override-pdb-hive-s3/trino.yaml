@@ -11,8 +11,8 @@ spec:
         connector.name: hive
         fs.hadoop.enabled: "true"
         hive.metastore.uri: thrift://test-hive-metastore-default:9083
-        hive.s3.aws-access-key: minioAccessKey
-        hive.s3.aws-secret-key: minioSecretKey
+        hive.s3.aws-access-key: ($WAREHOUSE_MINIO_USERNAME)
+        hive.s3.aws-secret-key: ($WAREHOUSE_MINIO_PASSWORD)
         hive.s3.endpoint: http://minio:9000
         hive.s3.path-style-access: "true"
     catalogLabelSelector:
