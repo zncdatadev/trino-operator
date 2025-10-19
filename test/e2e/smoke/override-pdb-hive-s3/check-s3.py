@@ -38,12 +38,14 @@ if __name__ == '__main__':
     all_args = argparse.ArgumentParser()
     # Add arguments to the parser
     all_args.add_argument("-n", "--namespace", required=True, help="Namespace the test is running in")
+    all_args.add_argument("-u", "--user", required=True, help="Username to connect as")
+    all_args.add_argument("-p", "--password", required=True, help="Password for the user")
+    all_args.add_argument("-b", "--bucket", required=False, default="trino", help="S3 Bucket name")
 
     args = vars(all_args.parse_args())
-    namespace = args["namespace"]
 
     print("Starting S3 tests...")
-    connection = get_connection("admin", "admin", namespace)
+    connection = get_connection(args['user'], args['password'], args["namespace"])
 
     trino_version = run_query(connection, "select node_version from system.runtime.nodes where coordinator = true and state = 'active'")[0][0]
     print(f"[INFO] Testing against Trino version \"{trino_version}\"")
@@ -53,7 +55,7 @@ if __name__ == '__main__':
     # assert trino_version.isnumeric()
     # assert trino_version == run_query(connection, "select version()")[0][0]
 
-    run_query(connection, "CREATE SCHEMA IF NOT EXISTS hive.minio WITH (location = 's3a://trino/')")
+    run_query(connection, f"CREATE SCHEMA IF NOT EXISTS hive.minio WITH (location = 's3a://{args['bucket']}/')")
 
     run_query(connection, "DROP TABLE IF EXISTS hive.minio.taxi_data")
     run_query(connection, "DROP TABLE IF EXISTS hive.minio.taxi_data_copy")
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     run_query(connection, "DROP TABLE IF EXISTS hive.hdfs.taxi_data_copy")
     run_query(connection, "DROP TABLE IF EXISTS iceberg.minio.taxi_data_copy_iceberg")
 
-    run_query(connection, """
+    run_query(connection, f"""
 CREATE TABLE IF NOT EXISTS hive.minio.taxi_data (
     vendor_id VARCHAR,
     tpep_pickup_datetime VARCHAR,
@@ -70,7 +72,7 @@ CREATE TABLE IF NOT EXISTS hive.minio.taxi_data (
     trip_distance VARCHAR,
     ratecode_id VARCHAR
 ) WITH (
-    external_location = 's3a://trino/taxi-data/',
+    external_location = 's3a://{args['bucket']}/taxi-data/',
     format = 'csv',
     skip_header_line_count = 1
 )
