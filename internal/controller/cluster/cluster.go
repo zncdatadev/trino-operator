@@ -62,7 +62,7 @@ func (r *Reconciler) getCoordinatorSvcFqdn() string {
 	if coordinator.RoleGroups != nil {
 		// "coordinator-"+name+"."+r.Client.GetOwnerNamespace()+".svc.cluster.local"
 		for name := range coordinator.RoleGroups {
-			roleGroupInfo := reconciler.RoleGroupInfo{RoleInfo: reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "coordinator"}, RoleGroupName: name}
+			roleGroupInfo := reconciler.RoleGroupInfo{RoleInfo: reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: string(common.RoleCoordinator)}, RoleGroupName: name}
 			fqdns = append(fqdns, strings.Join([]string{roleGroupInfo.GetFullName(), r.Client.GetOwnerNamespace(), "svc.cluster.local"}, "."))
 		}
 	}
@@ -84,7 +84,7 @@ func (r *Reconciler) RegisterResources(ctx context.Context) error {
 	}
 
 	coordinatorSvcFqdn := r.getCoordinatorSvcFqdn()
-	coordinatorRoleInfo := reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "coordinator"}
+	coordinatorRoleInfo := reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: string(common.RoleCoordinator)}
 	coordinatorReconciler := coordinator.NewWorkerReconciler(
 		r.Client,
 		r.IsStopped(),
@@ -103,7 +103,7 @@ func (r *Reconciler) RegisterResources(ctx context.Context) error {
 		r.Client,
 		r.IsStopped(),
 		r.ClusterConfig,
-		reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: "worker"},
+		reconciler.RoleInfo{ClusterInfo: r.ClusterInfo, RoleName: string(common.RoleWorker)},
 		r.GetImage(),
 		coordinatorSvcFqdn,
 		r.Spec.Workers,
