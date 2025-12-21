@@ -1,0 +1,15 @@
+apiVersion: trino.kubedoop.dev/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: test-trino-observability
+spec:
+  image:
+    productVersion: ($values.product_version)
+  coordinators:
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    roleGroups:
+      default:
+        replicas: 2
