@@ -55,10 +55,10 @@ jobs:
 
       - name: Build and push oci chart
         run: |
-          make chart-publish
+          make helm-chart-publish
 
       - name: Clone helm charts repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: zncdatadev/kubedoop-helm-charts
           ref: gh-pages

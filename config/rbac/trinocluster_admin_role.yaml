@@ -1,9 +1,9 @@
 # This rule is not used by the project trino-operator itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
-# Grants read-only access to trino.kubedoop.dev.
-# This role is intended for users who need visibility into these resources
-# without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
+# Grants full permissions ('*') over trino.kubedoop.dev.
+# This role is intended for users authorized to modify roles and bindings within the cluster,
+# enabling them to delegate specific permissions to other users or groups as needed.
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -11,19 +11,17 @@ metadata:
   labels:
     app.kubernetes.io/name: trino-operator
     app.kubernetes.io/managed-by: kustomize
-  name: trinocatalog-viewer-role
+  name: trinocluster-admin-role
 rules:
 - apiGroups:
   - trino.kubedoop.dev
   resources:
-  - trinocatalogs
+  - trinoclusters
   verbs:
-  - get
-  - list
-  - watch
+  - '*'
 - apiGroups:
   - trino.kubedoop.dev
   resources:
-  - trinocatalogs/status
+  - trinoclusters/status
   verbs:
   - get
