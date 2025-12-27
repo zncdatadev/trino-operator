@@ -106,6 +106,13 @@ func (r *Reconciler) registerResourceWithRoleGroup(
 	)
 	reconcilers = append(reconcilers, serviceReconciler)
 
+	// add metrics service reconciler
+	metricsServiceReconciler := common.NewRoleGroupMetricsService(
+		r.Client,
+		&info,
+	)
+	reconcilers = append(reconcilers, metricsServiceReconciler)
+
 	statefulSetReconciler, err := common.NewStatefulSetReconciler(
 		r.Client,
 		r.ClusterConfig,
