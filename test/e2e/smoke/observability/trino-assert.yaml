@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-trino-observability-coordinator-default-metrics
+  labels:
+    prometheus.io/scrape: "true"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/scheme: "http"
+spec:
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: 8081
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    app.kubernetes.io/instance: test-trino-observability
+    app.kubernetes.io/component: coordinator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-trino-observability-worker-default-metrics
+  labels:
+    prometheus.io/scrape: "true"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/scheme: "http"
+spec:
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: 8081
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    app.kubernetes.io/instance: test-trino-observability
+    app.kubernetes.io/component: worker
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-trino-observability-coordinator-default
+status:
+  availableReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-trino-observability-worker-default
+status:
+  availableReplicas: 2
+  replicas: 2
