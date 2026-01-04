@@ -37,6 +37,8 @@ const (
 	HttpPort                 int32 = 8080
 	HttpsPortName                  = "https"
 	HttpsPort                int32 = 8443
+	MetricsPortName                = "metrics"
+	MetricsPort              int32 = 8081
 )
 
 const (

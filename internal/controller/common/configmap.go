@@ -180,10 +180,10 @@ func (b *ConfigMapBuilder) getCatalogProperties() map[string]string {
 }
 
 func (b *ConfigMapBuilder) getDiscoveryUri() string {
-	schema := "http"
+	schema := HttpScheme
 	port := int(trinosv1alpha1.HttpPort)
 	if b.enabledTls() {
-		schema = "https"
+		schema = HttpsScheme
 		port = int(trinosv1alpha1.HttpsPort)
 	}
 	return schema + "://" + b.CoordiantorSvcFqdn + ":" + strconv.Itoa(port)
@@ -300,6 +300,8 @@ func (b *ConfigMapBuilder) getHeapSize(factor float64) string {
 
 func (b *ConfigMapBuilder) getJvmProperties() string {
 
+	javaagentPath := path.Join(constants.KubedoopJmxDir, "jmx_prometheus_javaagent.jar")
+	jmxConfigPath := path.Join(constants.KubedoopJmxDir, "config.yaml")
 	jvm := `-server
 -Xmx` + b.getHeapSize(JvmHeapFactor) + `
 -Xms` + b.getHeapSize(JvmHeapFactor) + `
@@ -324,7 +326,7 @@ func (b *ConfigMapBuilder) getJvmProperties() string {
 -Djava.net.ssl.trustStorePassword=` + DefaultTlsPassphrase + `
 -Djava.net.ssl.trustStoreType=PKCS12
 -Djava.secret.properties=` + path.Join(constants.KubedoopConfigDir, "secret.properties") + `
--javaagent:` + path.Join(constants.KubedoopJmxDir, "jmx_prometheus_javaagent.jar") + `=9404:` + path.Join(constants.KubedoopJmxDir, "config.yaml") + `
+-javaagent:` + javaagentPath + fmt.Sprintf("=%d:", trinosv1alpha1.MetricsPort) + jmxConfigPath + `
 `
 	return util.IndentTab4Spaces(jvm)
 }
