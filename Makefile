@@ -100,7 +100,19 @@ cleanup-test-e2e: ## Tear down the Kind cluster used for e2e tests
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
-	"$(GOLANGCI_LINT)" run
+	@# Temporarily modify go.mod to use Go 1.24 for linting compatibility
+	@GO_VERSION=$$(grep '^go ' go.mod | awk '{print $$2}'); \
+	if [ "$$GO_VERSION" != "1.24.1" ] && [ "$$GO_VERSION" != "1.24" ]; then \
+		echo "Temporarily setting Go version to 1.24 for linting..."; \
+		cp go.mod go.mod.lintbak; \
+		sed -i 's/^go .*/go 1.24.1/' go.mod; \
+		"$(GOLANGCI_LINT)" run; \
+		EXIT_CODE=$$?; \
+		mv go.mod.lintbak go.mod; \
+		exit $$EXIT_CODE; \
+	else \
+		"$(GOLANGCI_LINT)" run; \
+	fi
 
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
@@ -245,7 +257,18 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+	@[ -f "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] && [ "$$(readlink -- "$(GOLANGCI_LINT)" 2>/dev/null)" = "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] || { \
+		set -e; \
+		TMP_DIR=$$(mktemp -d); \
+		cd $$TMP_DIR; \
+		go mod init tmp; \
+		echo "Building golangci-lint $(GOLANGCI_LINT_VERSION) from source..."; \
+		GOBIN="$(LOCALBIN)" go install -a github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
+		cd -; \
+		rm -rf $$TMP_DIR; \
+		mv "$(LOCALBIN)/golangci-lint" "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)"; \
+		ln -sf "$$(basename "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)")" "$(GOLANGCI_LINT)"; \
+	}
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
