@@ -255,18 +255,7 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	@[ -f "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] && [ "$$(readlink -- "$(GOLANGCI_LINT)" 2>/dev/null)" = "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] || { \
-		set -e; \
-		TMP_DIR=$$(mktemp -d); \
-		cd $$TMP_DIR; \
-		go mod init tmp; \
-		echo "Building golangci-lint $(GOLANGCI_LINT_VERSION) from source..."; \
-		GOBIN="$(LOCALBIN)" go install -a github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
-		cd -; \
-		rm -rf $$TMP_DIR; \
-		mv "$(LOCALBIN)/golangci-lint" "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)"; \
-		ln -sf "$$(basename "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)")" "$(GOLANGCI_LINT)"; \
-	}
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
