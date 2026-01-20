@@ -105,11 +105,9 @@ lint: golangci-lint ## Run golangci-lint linter
 	if [ "$$GO_VERSION" != "1.24.1" ] && [ "$$GO_VERSION" != "1.24" ]; then \
 		echo "Temporarily setting Go version to 1.24 for linting..."; \
 		cp go.mod go.mod.lintbak; \
+		trap 'mv go.mod.lintbak go.mod 2>/dev/null || true' EXIT INT TERM; \
 		sed -i 's/^go .*/go 1.24.1/' go.mod; \
 		"$(GOLANGCI_LINT)" run; \
-		EXIT_CODE=$$?; \
-		mv go.mod.lintbak go.mod; \
-		exit $$EXIT_CODE; \
 	else \
 		"$(GOLANGCI_LINT)" run; \
 	fi
