@@ -30,7 +30,10 @@ type Oidc struct {
 // }
 
 func (o *Oidc) GetConfigProperties() *properties.Properties {
-	scopes := []string{"openid", "email", "profile"}
+	scopes := make([]string, 3, 3+len(o.Config.ExtraScopes))
+	scopes[0] = "openid"
+	scopes[1] = "email"
+	scopes[2] = "profile"
 	issuer := url.URL{
 		Scheme: "http",
 		Host:   o.Provider.Hostname,
