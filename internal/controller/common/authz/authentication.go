@@ -84,7 +84,7 @@ func NewAuthentication(
 }
 
 func (a *TrinoAuthentication) GetEnvVars() []corev1.EnvVar {
-	envVars := []corev1.EnvVar{}
+	envVars := make([]corev1.EnvVar, 0, len(a.Authenticators))
 
 	for _, authenticator := range a.Authenticators {
 		envVars = append(envVars, authenticator.GetEnvVars()...)
@@ -94,7 +94,7 @@ func (a *TrinoAuthentication) GetEnvVars() []corev1.EnvVar {
 }
 
 func (a *TrinoAuthentication) GetVolumes() []corev1.Volume {
-	volumes := []corev1.Volume{}
+	volumes := make([]corev1.Volume, 0, len(a.Authenticators))
 
 	for _, authenticator := range a.Authenticators {
 		volumes = append(volumes, authenticator.GetVolumes()...)
@@ -104,7 +104,7 @@ func (a *TrinoAuthentication) GetVolumes() []corev1.Volume {
 }
 
 func (a *TrinoAuthentication) GetVolumeMounts() []corev1.VolumeMount {
-	volumeMounts := []corev1.VolumeMount{}
+	volumeMounts := make([]corev1.VolumeMount, 0, len(a.Authenticators))
 
 	for _, authenticator := range a.Authenticators {
 		volumeMounts = append(volumeMounts, authenticator.GetVolumeMounts()...)
@@ -127,7 +127,7 @@ func (a *TrinoAuthentication) GetConfigProperties() *properties.Properties {
 }
 
 func (a *TrinoAuthentication) GetCommands() []string {
-	commands := []string{}
+	commands := make([]string, 0, len(a.Authenticators))
 
 	for _, authenticator := range a.Authenticators {
 		commands = append(commands, authenticator.GetCommands()...)
