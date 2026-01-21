@@ -100,17 +100,7 @@ cleanup-test-e2e: ## Tear down the Kind cluster used for e2e tests
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
-	@# Temporarily modify go.mod to use Go 1.24 for linting compatibility
-	@GO_VERSION=$$(grep '^go ' go.mod | awk '{print $$2}'); \
-	if [ "$$GO_VERSION" != "1.24.1" ] && [ "$$GO_VERSION" != "1.24" ]; then \
-		echo "Temporarily setting Go version to 1.24 for linting..."; \
-		cp go.mod go.mod.lintbak; \
-		trap 'mv go.mod.lintbak go.mod 2>/dev/null || true' EXIT INT TERM; \
-		sed -i 's/^go .*/go 1.24.1/' go.mod; \
-		"$(GOLANGCI_LINT)" run; \
-	else \
-		"$(GOLANGCI_LINT)" run; \
-	fi
+	"$(GOLANGCI_LINT)" run
 
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
