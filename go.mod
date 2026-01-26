@@ -1,6 +1,6 @@
 module github.com/zncdatadev/trino-operator
 
-go 1.25.5
+go 1.24.12
 
 require (
 	github.com/go-logr/logr v1.4.3
