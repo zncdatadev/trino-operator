@@ -160,3 +160,6 @@ docker-digests.json
 # helm package directory
 target
 /target/
+
+# ai coding
+.omc
