@@ -30,7 +30,7 @@ jobs:
           # Check if the CRDs are in sync with the manifests
           if ! git diff --exit-code; then
             echo "CRDs are not in sync with the manifests."
-            echo "Please run 'make manifest' to update the CRDs."
+            echo "Please run 'make manifests' to update the CRDs."
             exit 1
           fi
 
