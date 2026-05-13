@@ -37,22 +37,21 @@ func NewClusterReconciler(
 }
 
 func (r *Reconciler) GetImage() *util.Image {
-	image := util.NewImage(
+	productVersion := trinov1alpha1.DefaultProductVersion
+	if r.Spec.Image.ProductVersion != "" {
+		productVersion = r.Spec.Image.ProductVersion
+	}
+
+	return util.NewImage(
 		trinov1alpha1.DefaultProductName,
 		version.BuildVersion,
-		trinov1alpha1.DefaultProductVersion,
+		productVersion,
 		func(options *util.ImageOptions) {
 			options.Custom = r.Spec.Image.Custom
 			options.Repo = r.Spec.Image.Repo
 			options.PullPolicy = r.Spec.Image.PullPolicy
 		},
 	)
-
-	if r.Spec.Image.KubedoopVersion != "" {
-		image.KubedoopVersion = r.Spec.Image.KubedoopVersion
-	}
-
-	return image
 }
 
 func (r *Reconciler) getCoordinatorSvcFqdn() string {
