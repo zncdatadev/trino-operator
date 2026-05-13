@@ -283,14 +283,6 @@ helm-chart-package: ## Package helm chart for the operator.
 	rm -rf target/charts/*.tgz
 	"$(HELM)" package deploy/helm/$(PROJECT_NAME) --version $(VERSION) --app-version $(VERSION) --destination target/charts
 
-.PHONY: chart-e2e
-chart-e2e: setup-chainsaw-cluster chainsaw docker-build helm-chart-package ## Run e2e tests with Helm chart deployment
-	"$(KIND)" --name $(CHAINSAW_CLUSTER) load docker-image "$(IMG)"
-	"$(HELM)" upgrade --install --create-namespace --namespace trino-operator \
-		--kubeconfig $(CHAINSAW_KUBECONFIG) --wait $(PROJECT_NAME) \
-		target/charts/$(PROJECT_NAME)-$(VERSION).tgz
-	KUBECONFIG=$(CHAINSAW_KUBECONFIG) $(CHAINSAW) test --config ./test/e2e/.chainsaw.yaml --test-dir ./test/e2e/
-
 .PHONY: helm-chart-publish ## Publish helm chart for the operator.
 helm-chart-publish: helm-chart-package ## Publish helm chart for the operator.
 	"$(HELM)" push target/charts/$(PROJECT_NAME)-$(VERSION).tgz $(OCI_REGISTRY)
@@ -346,6 +338,14 @@ setup-chainsaw-e2e: chainsaw docker-build ## Run the chainsaw setup
 	"$(KIND)" --name $(CHAINSAW_CLUSTER) load docker-image "$(IMG)"
 	KUBECONFIG=$(CHAINSAW_KUBECONFIG) $(MAKE) deploy
 
+
+.PHONY: chart-e2e
+chart-e2e: setup-chainsaw-cluster chainsaw docker-build helm-chart-package ## Run e2e tests with Helm chart deployment
+	"$(KIND)" --name $(CHAINSAW_CLUSTER) load docker-image "$(IMG)"
+	"$(HELM)" upgrade --install --create-namespace --namespace trino-operator \
+		--kubeconfig $(CHAINSAW_KUBECONFIG) --wait $(PROJECT_NAME) \
+		target/charts/$(PROJECT_NAME)-$(VERSION).tgz
+	KUBECONFIG=$(CHAINSAW_KUBECONFIG) $(CHAINSAW) test --config ./test/e2e/.chainsaw.yaml --test-dir ./test/e2e/
 
 .PHONY: chainsaw-e2e
 chainsaw-e2e: ## Run the chainsaw e2e tests
