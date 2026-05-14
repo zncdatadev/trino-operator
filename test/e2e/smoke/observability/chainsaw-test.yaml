@@ -60,7 +60,7 @@ spec:
 
               # Test metrics endpoint accessibility
               HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/metrics)
-              if [[ "$HTTP_CODE" != "200" ]]; then
+              if [ "$HTTP_CODE" != "200" ]; then
                 echo "ERROR: Failed to access metrics endpoint, HTTP code: $HTTP_CODE"
                 kill $PF_PID 2>/dev/null || true
                 exit 1
