@@ -163,6 +163,3 @@ target
 
 # ai coding
 .omc
-
-# generated chainsaw values
-test/e2e/.values.yaml
