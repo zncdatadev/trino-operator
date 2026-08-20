@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  # Allow a manual run so the publish credentials can be verified on demand.
+  # Without this the only way to exercise them is to land a commit on main,
+  # which is how an expired HELM_CHARTS_REPO_TOKEN went unnoticed for weeks.
+  workflow_dispatch:
 
 
 jobs:
