@@ -45,7 +45,28 @@ spec:
     - apply:
         file: trino.yaml
     - assert:
+        # The global assert timeout is 120s, which is not enough here: the
+        # coordinator only becomes ready once LDAP, Keycloak and the Hive
+        # metastore are all reachable, so it is the slowest thing this suite
+        # waits on. The keycloak assert above already carries its own 4m for the
+        # same reason - this one was simply missed, and it fails intermittently
+        # on loaded runners.
+        timeout: 5m
         file: trino-assert.yaml
+    catch:
+      # Without this the assert failure above reports only "readyReplicas: field
+      # not found" and nothing about why - which is how this stayed a guess
+      # across four CI failures.
+      - describe:
+          apiVersion: apps/v1
+          kind: StatefulSet
+      - describe:
+          apiVersion: v1
+          kind: Pod
+      - podLogs:
+          selector: app.kubernetes.io/name=trino
+      - podLogs:
+          selector: app.kubernetes.io/name=trino-operator
   - name: test trino oidc authentication
     try:
     - script:
