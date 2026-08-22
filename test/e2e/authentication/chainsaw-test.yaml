@@ -25,6 +25,19 @@ spec:
         file: ldap-install.yaml
     - assert:
         file: ldap-install-assert.yaml
+    # These fixtures have no diagnostics of their own, so when one of them fails
+    # to come up the assert reports only "readyReplicas: field not found" and the
+    # run gives nothing to go on.
+    catch:
+      - describe:
+          apiVersion: apps/v1
+          kind: StatefulSet
+      - describe:
+          apiVersion: v1
+          kind: Pod
+      - podLogs:
+          selector: app.kubernetes.io/name=lldap
+      - events: {}
   - name: install keycloak
     try:
     - apply:
@@ -32,6 +45,16 @@ spec:
     - assert:
         timeout: 4m
         file: keycloak-install-assert.yaml
+    catch:
+      - describe:
+          apiVersion: apps/v1
+          kind: StatefulSet
+      - describe:
+          apiVersion: v1
+          kind: Pod
+      - podLogs:
+          selector: app.kubernetes.io/name=keycloak
+      - events: {}
   - name: deploy authentication classes
     try:
     - apply:
