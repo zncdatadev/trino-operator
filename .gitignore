@@ -163,3 +163,6 @@ target
 
 # ai coding
 .omc
+
+# AI worktree
+.worktree/
