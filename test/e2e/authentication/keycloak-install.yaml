@@ -170,6 +170,12 @@ spec:
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
+          # Without this, failureThreshold defaults to 3, giving keycloak only
+          # 30s + 3x10s = 60s to start. A cold start here initialises the H2
+          # database and imports the realm, which exceeds that on a loaded
+          # runner - the container then gets killed, restarted, and lands in
+          # CrashLoopBackOff, so it never recovers. 60 attempts = 10 minutes.
+          failureThreshold: 60
         volumeMounts:
         - name: data
           mountPath: /opt/keycloak/data
