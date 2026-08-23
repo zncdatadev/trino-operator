@@ -66,27 +66,32 @@ spec:
                 exit 1
               fi
 
-              # Fetch metrics
-              METRICS=$(curl -s http://localhost:8081/metrics)
+              # Fetch metrics to temp file (avoid set -x echoing full content)
+              TEMP_METRICS=$(mktemp)
+              curl -s http://localhost:8081/metrics > "$TEMP_METRICS" 2>/dev/null
 
               # Verify Prometheus format
-              if ! echo "$METRICS" | grep -q "# TYPE"; then
+              if ! grep -q "# TYPE" "$TEMP_METRICS"; then
                 echo "ERROR: Missing Prometheus format (# TYPE)"
+                rm -f "$TEMP_METRICS"
                 kill $PF_PID 2>/dev/null || true
                 exit 1
               fi
 
               # Verify JVM metrics present
-              if ! echo "$METRICS" | grep -q "jvm_"; then
+              if ! grep -q "jvm_" "$TEMP_METRICS"; then
                 echo "ERROR: Missing JVM metrics"
+                rm -f "$TEMP_METRICS"
                 kill $PF_PID 2>/dev/null || true
                 exit 1
               fi
 
               # Verify specific metrics (arbitrary metric to ensure data is present)
-              if ! echo "$METRICS" | grep -q "jvm_memory_used_bytes"; then
+              if ! grep -q "jvm_memory_used_bytes" "$TEMP_METRICS"; then
                 echo "WARNING: Expected metric 'jvm_memory_used_bytes' not found"
               fi
+
+              rm -f "$TEMP_METRICS"
 
               echo "✓ Pod $POD metrics OK"
 
