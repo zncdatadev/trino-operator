@@ -80,7 +80,7 @@ spec:
     - |
       set -ex
       # Check for the presence of both flag files to confirm success
-      if [[ -f /data/active && -f /data/s3 ]]; then
+      if [ -f /data/active ] && [ -f /data/s3 ]; then
         echo "Trino access and Hive S3 access tests passed."
         exit 0
       fi
