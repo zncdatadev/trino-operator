@@ -41,11 +41,11 @@ spec:
             value: ($namespace)
           content: |
             #!/bin/bash
-            set -ex
+            set -e
 
             # Get all Trino pods (coordinator and worker)
             echo "Namespace: $NAMESPACE"
-            PODS=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/instance=test-trino-observability -o jsonpath='{.items[*].metadata.name}')
+            PODS=$(kubectl get pods -n "$NAMESPACE" -l trino.kubedoop.dev/cluster=test-trino-observability -o jsonpath='{.items[*].metadata.name}')
             echo "Found pods: $PODS"
 
             for POD in $PODS; do
@@ -60,7 +60,7 @@ spec:
 
               # Test metrics endpoint accessibility
               HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/metrics)
-              if [[ "$HTTP_CODE" != "200" ]]; then
+              if [ "$HTTP_CODE" != "200" ]; then
                 echo "ERROR: Failed to access metrics endpoint, HTTP code: $HTTP_CODE"
                 kill $PF_PID 2>/dev/null || true
                 exit 1
@@ -106,7 +106,7 @@ spec:
               value: ($namespace)
           content: |
             #!/bin/bash
-            set -ex
+            set -e
 
             echo "=== Environment Check ==="
             echo "NAMESPACE variable: '$NAMESPACE'"
@@ -116,18 +116,33 @@ spec:
               exit 1
             fi
 
+            PROMETHEUS_RELEASE="prometheus-$(printf '%s' "$NAMESPACE" | sha256sum | cut -c1-12)"
+
             helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
             helm repo update
 
             echo "=== Installing Prometheus ==="
-            echo "Will install to namespace: $NAMESPACE"
+            echo "Will install release $PROMETHEUS_RELEASE to namespace: $NAMESPACE"
 
-            helm upgrade --install prometheus prometheus-community/prometheus \
+            helm upgrade --install "$PROMETHEUS_RELEASE" prometheus-community/prometheus \
               --version 25.3.1 \
               --namespace "$NAMESPACE" \
               --create-namespace \
               -f prometheus-values.yaml \
               --wait --timeout 5m
+    cleanup:
+      - script:
+          bindings:
+            - name: NAMESPACE
+              value: ($namespace)
+          content: |
+            #!/bin/sh
+            set -e
+
+            PROMETHEUS_RELEASE="prometheus-$(printf '%s' "$NAMESPACE" | sha256sum | cut -c1-12)"
+            helm uninstall "$PROMETHEUS_RELEASE" \
+              --namespace "$NAMESPACE" \
+              --wait --timeout 2m 2>/dev/null || true
 
   # 4. Verify Prometheus targets
   - name: verify prometheus targets
@@ -140,12 +155,15 @@ spec:
             #!/bin/bash
             set -e
 
+            PROMETHEUS_RELEASE="prometheus-$(printf '%s' "$NAMESPACE" | sha256sum | cut -c1-12)"
+            PROMETHEUS_SERVICE="$PROMETHEUS_RELEASE-server"
+
             # Wait for Prometheus server pod
-            kubectl wait --for=condition=Ready pod -l app=prometheus,component=server -n "$NAMESPACE" --timeout=300s 2>/dev/null || true
+            kubectl wait --for=condition=Ready pod -l "app.kubernetes.io/name=prometheus,app.kubernetes.io/component=server,app.kubernetes.io/instance=$PROMETHEUS_RELEASE" -n "$NAMESPACE" --timeout=300s
             sleep 3
 
             # Port-forward
-            kubectl port-forward -n "$NAMESPACE" svc/prometheus-server 9090:80 > /dev/null 2>&1 &
+            kubectl port-forward -n "$NAMESPACE" "svc/$PROMETHEUS_SERVICE" 9090:80 > /dev/null 2>&1 &
             PF_PID=$!
             sleep 2
 
@@ -157,7 +175,7 @@ spec:
             echo "=== Checking Prometheus Targets ==="
 
             # Check if we have any active targets
-            ACTIVE=$(echo "$TARGETS" | grep -o '"state":"up"' | wc -l)
+            ACTIVE=$(echo "$TARGETS" | grep -o '"health":"up"' | wc -l)
             echo "Total active targets: $ACTIVE"
 
             if [ "$ACTIVE" -eq 0 ]; then

@@ -87,7 +87,7 @@ spec:
           apiVersion: v1
           kind: Pod
       - podLogs:
-          selector: app.kubernetes.io/name=trino
+          selector: trino.kubedoop.dev/cluster=test-trino
       - podLogs:
           selector: app.kubernetes.io/name=trino-operator
   - name: test trino oidc authentication

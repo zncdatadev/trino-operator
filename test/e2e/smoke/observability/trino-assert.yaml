@@ -16,8 +16,9 @@ spec:
       protocol: TCP
       targetPort: metrics
   selector:
-    app.kubernetes.io/instance: test-trino-observability
-    app.kubernetes.io/component: coordinator
+    trino.kubedoop.dev/cluster: test-trino-observability
+    trino.kubedoop.dev/role: coordinator
+    trino.kubedoop.dev/role-group: default
 ---
 apiVersion: v1
 kind: Service
@@ -37,8 +38,9 @@ spec:
       protocol: TCP
       targetPort: metrics
   selector:
-    app.kubernetes.io/instance: test-trino-observability
-    app.kubernetes.io/component: worker
+    trino.kubedoop.dev/cluster: test-trino-observability
+    trino.kubedoop.dev/role: worker
+    trino.kubedoop.dev/role-group: default
 ---
 apiVersion: apps/v1
 kind: StatefulSet

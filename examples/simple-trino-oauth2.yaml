@@ -56,6 +56,7 @@ spec:
       rootPath: /realms/kubedoopdev
       scopes: ["openid"]
       principalClaim: preferred_username
+      providerHint: keycloak
 ---
 apiVersion: v1
 kind: Secret
@@ -63,27 +64,8 @@ metadata:
   name: simple-trino-oidc-secret
 type: kubernetes.io/opaque
 stringData:
-  clientId: trino
-  clientSecret: trino-client-secret
----
-apiVersion: authentication.kubedoop.dev/v1alpha1
-kind: AuthenticationClass
-metadata:
-  name: simple-trino-users
-spec:
-  provider:
-    static:
-      userCredentialsSecret:
-        name: simple-trino-users-secret
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: simple-trino-users-secret
-type: kubernetes.io/opaque
-stringData:
-  test: test
-  abc: abc
+  CLIENT_ID: trino
+  CLIENT_SECRET: trino-client-secret
 ---
 apiVersion: trino.kubedoop.dev/v1alpha1
 kind: TrinoCluster
@@ -97,8 +79,10 @@ spec:
       - authenticationClass: simple-trino-oidc
         oidc:
           clientCredentialsSecret: simple-trino-oidc-secret
-      - authenticationClass: simple-trino-users
     catalogLabelSelector: {}
+    tls:
+      internalSecretClass: tls
+      serverSecretClass: tls
   coordinators:
     roleGroups:
       default:

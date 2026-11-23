@@ -4,8 +4,7 @@ import (
 	"path"
 
 	authv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/authentication/v1alpha1"
-	"github.com/zncdatadev/operator-go/pkg/config/properties"
-	"github.com/zncdatadev/operator-go/pkg/constants"
+	"github.com/zncdatadev/operator-go/pkg/constant"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -20,8 +19,11 @@ func (s *Static) GetCommands() []string {
 	return nil
 }
 
-func (s *Static) GetConfigProperties() *properties.Properties {
-	return nil
+func (s *Static) GetConfigProperties() map[string]string {
+	// The mounted Secret contains plain key/value credentials and is not a Trino password file.
+	// Enabling PASSWORD here without generating password-authenticator.properties and a supported
+	// hashed password file would make Trino fail during startup.
+	return map[string]string{}
 }
 
 func (s *Static) GetEnvVars() []corev1.EnvVar {
@@ -29,7 +31,7 @@ func (s *Static) GetEnvVars() []corev1.EnvVar {
 }
 
 func (s *Static) getCredentialsMountPath() string {
-	return path.Join(constants.KubedoopRoot, "auth-secrets")
+	return path.Join(constant.KubedoopRoot, "auth-secrets")
 }
 
 func (s *Static) getVolumeName() string {
@@ -37,6 +39,10 @@ func (s *Static) getVolumeName() string {
 }
 
 func (s *Static) GetVolumeMounts() []corev1.VolumeMount {
+	if s == nil || s.Provider == nil || s.Provider.UserCredentialsSecret == nil {
+		return nil
+	}
+
 	return []corev1.VolumeMount{
 		{
 			Name:      s.getVolumeName(),
@@ -46,6 +52,10 @@ func (s *Static) GetVolumeMounts() []corev1.VolumeMount {
 }
 
 func (s *Static) GetVolumes() []corev1.Volume {
+	if s == nil || s.Provider == nil || s.Provider.UserCredentialsSecret == nil {
+		return nil
+	}
+
 	return []corev1.Volume{
 		{
 			Name: s.getVolumeName(),

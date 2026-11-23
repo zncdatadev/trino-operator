@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-04-06 | Updated: 2026-04-06 -->
+<!-- Generated: 2026-04-06 | Updated: 2026-09-15 -->
 
 # trino-operator
 
@@ -20,13 +20,12 @@ Manages Trino deployments on Kubernetes. Handles creation, configuration, and li
 | `api/v1alpha1/` | Kubernetes CRD definitions (`TrinoCluster`, `TrinoCatalog`) |
 | `cmd/` | Operator entry point |
 | `config/` | Kubernetes manifests and kustomize configs |
-| `internal/controller/` | Controller and reconciliation logic |
-| `internal/controller/cluster/` | Cluster-level reconciler |
-| `internal/controller/coordinator/` | Coordinator role reconciler |
-| `internal/controller/worker/` | Worker role reconciler |
-| `internal/controller/common/` | Shared resources (configmap, statefulset, service, secret, authz) |
+| `internal/controller/` | GenericReconciler product integration, role-group resource handler, cluster extension, and configuration defaults |
+| `internal/controller/common/authz/` | AuthenticationClass validation and Trino authentication configuration |
 | `deploy/` | Deployment manifests |
+| `docs/` | Operator behavior and upgrade procedures |
 | `examples/` | Example CR manifests |
+| `hack/` | Generated-manifest checks and framework upgrade acceptance scripts |
 | `test/` | E2E test suites |
 
 ## For AI Agents
@@ -45,23 +44,24 @@ Manages Trino deployments on Kubernetes. Handles creation, configuration, and li
 - Uses Ginkgo/Gomega test framework
 
 ### Common Patterns
-- Main reconciler: `internal/controller/trino_controller.go` (`TrinoReconciler`)
-- Cluster reconciler: `internal/controller/cluster/cluster.go`
-- Role reconcilers: `coordinator/role.go`, `worker/role.go`
-- Shared resources under `internal/controller/common/`
+- Controller registration: `cmd/main.go` (`GenericReconciler`)
+- Role and role-group reconciliation: `internal/controller/trino_handler.go` (`TrinoRoleGroupHandler`)
+- Cluster-scoped shared resources: `internal/controller/cluster_extension.go` (`ClusterResourcesExtension`)
+- Product configuration defaults and merge schemas: `internal/controller/config.go`
+- Authentication handling: `internal/controller/common/authz/`
 - CRDs follow `v1alpha1` API version
-- Follows `operator-go` `GenericReconciler` pattern
-- RBAC annotations defined in `trino_controller.go`
+- Generated CRDs must stay synchronized with `deploy/helm/trino-operator/crds/crds.yaml`
+- RBAC source is `config/rbac/role.yaml`; keep the Helm ClusterRole synchronized with `make helm-rbac-sync-check`
 
 ## Dependencies
 
 ### Internal
-- `../operator-go` — Shared operator framework (`github.com/zncdatadev/operator-go v0.12.x`)
+- `../operator-go` — Shared operator framework (`github.com/zncdatadev/operator-go v0.13.x`)
 
 ### External
 - `sigs.k8s.io/controller-runtime` v0.23+
 - `k8s.io/api`, `k8s.io/apimachinery`, `k8s.io/client-go` v0.35+
 - Go 1.25+
-- Kubernetes 1.26+
+- Kubernetes 1.33-1.35 in release E2E; local and pull-request E2E default to 1.35
 
 <!-- MANUAL: -->

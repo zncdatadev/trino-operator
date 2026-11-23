@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"path"
 	"strconv"
-	"strings"
 
 	authv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/authentication/v1alpha1"
-	"github.com/zncdatadev/operator-go/pkg/config/properties"
-	"github.com/zncdatadev/operator-go/pkg/constants"
-	"github.com/zncdatadev/operator-go/pkg/util"
+	"github.com/zncdatadev/operator-go/pkg/constant"
+	"github.com/zncdatadev/operator-go/pkg/security"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 var _ Authenticator = &Ldap{}
@@ -24,6 +23,9 @@ type Ldap struct {
 
 // GetCommands implements Authenticator.
 func (l *Ldap) GetCommands() []string {
+	if l == nil || l.Provider == nil || l.Provider.BindCredentials == nil {
+		return nil
+	}
 
 	userEnvName := "LDAP_USER"
 	passwordEnvName := "LDAP_PASSWORD"
@@ -37,14 +39,18 @@ export ` + passwordEnvName + `=$(cat ` + passwordFile + `)
 set -x
 `
 
-	return []string{util.IndentTab4Spaces(s)}
+	return []string{s}
 }
 
 func (l *Ldap) getBindCredentialsMountPath() string {
-	return path.Join(constants.KubedoopTlsDir, l.Provider.BindCredentials.SecretClass)
+	return path.Join(constant.KubedoopTlsDir, l.Provider.BindCredentials.SecretClass)
 }
 
 func (l *Ldap) getEndpoint() string {
+	if l == nil || l.Provider == nil {
+		return ""
+	}
+
 	schema := "ldap"
 	if l.Provider.TLS != nil {
 		schema = "ldaps"
@@ -62,18 +68,28 @@ func (l *Ldap) getEndpoint() string {
 // }
 
 // GetConfigProperties implements Authenticator.
-func (l *Ldap) GetConfigProperties() *properties.Properties {
-	p := properties.NewProperties()
+func (l *Ldap) GetConfigProperties() map[string]string {
+	if l == nil || l.Provider == nil {
+		return map[string]string{}
+	}
 
-	p.Add(("http-server.authentication.type"), "PASSWORD")
-	p.Add(("http-server.authentication.ldap.server"), l.getEndpoint())
-	p.Add("password-authenticator.name", "ldap")
-	p.Add("ldap.user-base-dn", l.Provider.SearchBase)
-	p.Add("ldap.group-auth-pattern", fmt.Sprintf("(&(%s={user}))", l.Provider.LDAPFieldNames.Uid))
+	uidField := "uid"
+	if l.Provider.LDAPFieldNames != nil && l.Provider.LDAPFieldNames.Uid != "" {
+		uidField = l.Provider.LDAPFieldNames.Uid
+	}
 
-	// bindCredentials is required
-	p.Add("ldap.bind-dn", "${ENV:LDAP_USER}")
-	p.Add("ldap.bind-password", "${ENV:LDAP_PASSWORD}")
+	p := map[string]string{
+		"http-server.authentication.type":        "PASSWORD",
+		"http-server.authentication.ldap.server": l.getEndpoint(),
+		"password-authenticator.name":            "ldap",
+		"ldap.user-base-dn":                      l.Provider.SearchBase,
+		"ldap.group-auth-pattern":                fmt.Sprintf("(&(%s={user}))", uidField),
+	}
+
+	if l.Provider.BindCredentials != nil {
+		p["ldap.bind-dn"] = "${ENV:LDAP_USER}"
+		p["ldap.bind-password"] = "${ENV:LDAP_PASSWORD}"
+	}
 
 	// TODO: Add ldap tls support
 
@@ -92,6 +108,10 @@ func (l *Ldap) getBindCredentialsVolumeName() string {
 
 // GetVolumeMounts implements Authenticator.
 func (l *Ldap) GetVolumeMounts() []corev1.VolumeMount {
+	if l == nil || l.Provider == nil || l.Provider.BindCredentials == nil {
+		return nil
+	}
+
 	return []corev1.VolumeMount{
 		{
 			Name:      l.getBindCredentialsVolumeName(),
@@ -102,21 +122,16 @@ func (l *Ldap) GetVolumeMounts() []corev1.VolumeMount {
 
 // GetVolumes implements Authenticator.
 func (l *Ldap) GetVolumes() []corev1.Volume {
-	secretClass := l.Provider.BindCredentials.SecretClass
+	if l == nil || l.Provider == nil || l.Provider.BindCredentials == nil {
+		return nil
+	}
 
-	scopes := []string{}
-	if l.Provider.BindCredentials.Scope != nil {
-		if l.Provider.BindCredentials.Scope.Pod {
-			scopes = append(scopes, string(constants.PodScope))
-		}
-		if l.Provider.BindCredentials.Scope.Node {
-			scopes = append(scopes, string(constants.NodeScope))
-		}
-		if l.Provider.BindCredentials.Scope.Services != nil {
-			for _, s := range l.Provider.BindCredentials.Scope.Services {
-				scopes = append(scopes, string(constants.ServiceScope)+"="+s)
-			}
-		}
+	secretClass := l.Provider.BindCredentials.SecretClass
+	annotations := map[string]string{
+		security.SecretClassAnnotation: secretClass,
+	}
+	if scope := security.ScopeString(l.Provider.BindCredentials.Scope); scope != "" {
+		annotations[security.SecretClassScopeAnnotation] = scope
 	}
 
 	secretVolume := corev1.Volume{
@@ -125,14 +140,11 @@ func (l *Ldap) GetVolumes() []corev1.Volume {
 			Ephemeral: &corev1.EphemeralVolumeSource{
 				VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							constants.AnnotationSecretsClass: secretClass,
-							constants.AnnotationSecretsScope: strings.Join(scopes, constants.CommonDelimiter),
-						},
+						Annotations: annotations,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-						StorageClassName: constants.SecretStorageClassPtr(),
+						StorageClassName: ptr.To(string(security.SecretStorageClass)),
 						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: resource.MustParse("1Mi"),

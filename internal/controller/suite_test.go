@@ -26,7 +26,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
+	opcommon "github.com/zncdatadev/operator-go/pkg/common"
+	"github.com/zncdatadev/operator-go/pkg/reconciler"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -99,10 +101,31 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&TrinoReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
+	handler := NewTrinoRoleGroupHandler(k8sManager.GetScheme())
+	extensionRegistry := opcommon.NewExtensionRegistry[*trinov1alpha1.TrinoCluster]()
+	extensionRegistry.RegisterClusterExtension(NewClusterResourcesExtension(k8sManager.GetScheme()))
+
+	trinoReconciler, err := reconciler.NewGenericReconciler(
+		&reconciler.GenericReconcilerConfig[*trinov1alpha1.TrinoCluster]{
+			Client:            k8sManager.GetClient(),
+			APIReader:         k8sManager.GetAPIReader(),
+			Scheme:            k8sManager.GetScheme(),
+			Recorder:          k8sManager.GetEventRecorderFor("trino-cluster-controller"), //nolint:staticcheck // controller-runtime has not replaced this recorder API.
+			RoleGroupHandler:  handler,
+			RoleProvider:      handler,
+			RoleGroupResolver: handler,
+			ImageResolution: reconciler.ImageResolution{
+				ProductName: trinov1alpha1.DefaultProductName,
+				Defaults:    ImageDefaults(),
+			},
+			ExtensionRegistry: extensionRegistry,
+			Prototype:         &trinov1alpha1.TrinoCluster{},
+		},
+	)
+	Expect(err).ToNot(HaveOccurred())
+	err = trinoReconciler.SetupWithManagerOpts(k8sManager, reconciler.SetupWithManagerOptions{
+		ExtraOwns: []client.Object{&corev1.Secret{}},
+	})
 	Expect(err).ToNot(HaveOccurred())
 
 	// go func() {

@@ -153,6 +153,8 @@ Temporary Items
 
 kind-kubeconfig*
 /.kubeconfig
+/.kubeconfig-upgrade*
+/upgrade-evidence/
 
 docker-digests.json
 

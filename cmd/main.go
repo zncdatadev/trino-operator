@@ -27,11 +27,15 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	authv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/authentication/v1alpha1"
+	opcommon "github.com/zncdatadev/operator-go/pkg/common"
+	"github.com/zncdatadev/operator-go/pkg/reconciler"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -191,12 +195,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.TrinoReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Trino"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Trino")
+	handler := controller.NewTrinoRoleGroupHandler(mgr.GetScheme())
+	extensionRegistry := opcommon.NewExtensionRegistry[*trinov1alpha1.TrinoCluster]()
+	extensionRegistry.RegisterClusterExtension(controller.NewClusterResourcesExtension(mgr.GetScheme()))
+
+	trinoReconciler, err := reconciler.NewGenericReconciler(
+		&reconciler.GenericReconcilerConfig[*trinov1alpha1.TrinoCluster]{
+			Client:            mgr.GetClient(),
+			APIReader:         mgr.GetAPIReader(),
+			Scheme:            mgr.GetScheme(),
+			Recorder:          mgr.GetEventRecorderFor("trino-cluster-controller"), //nolint:staticcheck
+			RoleGroupHandler:  handler,
+			RoleProvider:      handler,
+			RoleGroupResolver: handler,
+			ImageResolution: reconciler.ImageResolution{
+				ProductName: trinov1alpha1.DefaultProductName,
+				Defaults:    controller.ImageDefaults(),
+			},
+			ExtensionRegistry: extensionRegistry,
+			Prototype:         &trinov1alpha1.TrinoCluster{},
+		})
+	if err != nil {
+		setupLog.Error(err, "unable to create GenericReconciler", "controller", "TrinoCluster")
+		os.Exit(1)
+	}
+	if err := trinoReconciler.SetupWithManagerOpts(mgr, reconciler.SetupWithManagerOptions{
+		ExtraOwns: []ctrlclient.Object{&corev1.Secret{}},
+	}); err != nil {
+		setupLog.Error(err, "unable to setup controller", "controller", "TrinoCluster")
 		os.Exit(1)
 	}
 

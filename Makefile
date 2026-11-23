@@ -277,8 +277,12 @@ HELM ?= helm
 helm-crd-sync: manifests kustomize ## Sync CRDs to helm chart for the operator
 	"$(KUSTOMIZE)" build config/crd > deploy/helm/$(PROJECT_NAME)/crds/crds.yaml
 
+.PHONY: helm-rbac-sync-check
+helm-rbac-sync-check: ## Verify the Helm ClusterRole matches the generated manager role.
+	HELM="$(HELM)" bash hack/check-helm-rbac.sh
+
 .PHONY: helm-chart-package ## Package helm chart for the operator.
-helm-chart-package: ## Package helm chart for the operator.
+helm-chart-package: helm-rbac-sync-check ## Package helm chart for the operator.
 	mkdir -p target/charts
 	rm -rf target/charts/*.tgz
 	"$(HELM)" package deploy/helm/$(PROJECT_NAME) --version $(VERSION) --app-version $(VERSION) --destination target/charts
@@ -299,7 +303,7 @@ CHAINSAW_KUBECONFIG ?= .kubeconfig
 # When run `kind create --image kindest/node:v${KIND_K8S_VERSION}`, the node image version of k8s will be used to create the kind cluster,
 # and the target kubeconfig file will be named as `$(CHAINSAW_KUBECONFIG)` (default: `.kubeconfig`).
 # So if you want to use the target cluster, run `export KUBECONFIG=$(CHAINSAW_KUBECONFIG)` (default: `.kubeconfig`).
-KIND_K8S_VERSION ?= 1.26.15
+KIND_K8S_VERSION ?= 1.35.0
 # The kind node image can found in https://github.com/kubernetes-sigs/kind/releases.
 KIND_IMAGE ?= kindest/node:v${KIND_K8S_VERSION}
 # Define operator dependencies to be installed before running chainsaw tests.
@@ -359,6 +363,32 @@ cleanup-chainsaw-e2e: ## Run the chainsaw cleanup
 			"$(HELM)" uninstall --namespace kubedoop-operators $$dep; \
 		done; \
 	fi
+
+# A fixed pre-framework baseline makes the upgrade and rollback contract reproducible.
+UPGRADE_BASELINE_REF ?= 6aee790ccc7daab3a13a6b45f87fffe1fc937a98
+UPGRADE_BASELINE_DIR ?= $(abspath $(shell git rev-parse --git-common-dir)/../.worktree/upgrade-baseline)
+UPGRADE_BASELINE_IMAGE ?= trino-operator:upgrade-baseline
+UPGRADE_QUERY_IMAGE ?= quay.io/zncdatadev/testing-tools:0.1.0-kubedoop0.0.0-dev
+UPGRADE_EVIDENCE_DIR ?= $(CURDIR)/upgrade-evidence
+
+.PHONY: framework-upgrade-e2e
+framework-upgrade-e2e: kustomize docker-build ## Verify framework upgrade, stop/resume, and rollback on a fresh kind cluster.
+	@clusters="$$("$(KIND)" get clusters)" || exit 1; \
+		if printf '%s\n' "$$clusters" | grep -Fxq "$(CHAINSAW_CLUSTER)"; then \
+			echo "Use a fresh cluster name; inspect/delete the previous test cluster first." >&2; exit 1; \
+		fi
+	$(MAKE) setup-chainsaw-cluster
+	@mkdir -p "$(dir $(UPGRADE_BASELINE_DIR))"
+	@if [ ! -d "$(UPGRADE_BASELINE_DIR)" ]; then \
+		git worktree add --detach "$(UPGRADE_BASELINE_DIR)" "$(UPGRADE_BASELINE_REF)"; \
+	fi
+	@test "$$(git -C "$(UPGRADE_BASELINE_DIR)" rev-parse HEAD)" = "$$(git rev-parse "$(UPGRADE_BASELINE_REF)")"
+	@test -z "$$(git -C "$(UPGRADE_BASELINE_DIR)" status --porcelain)"
+	$(MAKE) -C "$(UPGRADE_BASELINE_DIR)" docker-build IMG="$(UPGRADE_BASELINE_IMAGE)"
+	KUBECONFIG="$(abspath $(CHAINSAW_KUBECONFIG))" CHAINSAW_CLUSTER="$(CHAINSAW_CLUSTER)" \
+		UPGRADE_BASELINE_DIR="$(UPGRADE_BASELINE_DIR)" UPGRADE_BASELINE_IMAGE="$(UPGRADE_BASELINE_IMAGE)" \
+		UPGRADE_QUERY_IMAGE="$(UPGRADE_QUERY_IMAGE)" UPGRADE_EVIDENCE_DIR="$(UPGRADE_EVIDENCE_DIR)" \
+		IMG="$(IMG)" PRODUCT_VERSION="$(PRODUCT_VERSION)" bash hack/test-framework-upgrade.sh
 
 .PHONY: cleanup-chainsaw-cluster
 cleanup-chainsaw-cluster: ## Tear down the Kind cluster used for chainsaw e2e tests
